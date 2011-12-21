@@ -1,0 +1,27 @@
+Feature: Start instance(s) in single node deployment using  python-novaclient CLI
+    In order to smoke test OpenStack build
+    As tester
+    I want to register start instance and verify it is up and available via SSH
+
+    Scenario: Setup prerequisites
+        Require setup "single-node ! users ! network ! images"
+
+
+    Scenario: Register keypair
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        When I add keypair with name "{{keypair.name}}"
+        Then keypair with name "{{keypair.name}}" exists
+
+    Scenario: Start single instance
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And VM image "{{image.name}}" is registered
+        And keypair with name "{{keypair.name}}" exists
+        When I start VM instance "{{vm.name}}" using image "{{image.name}}",  flavor "{{vm.flavor}}" and keypair "{{keypair.name}}"
+        Then VM instance "{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
+        And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+
+
+    Scenario: SSH into VM instance
+        Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        When I check that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol
+        Then I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}"

@@ -1,0 +1,19 @@
+Feature: Create user and project using python-novaclient CLI
+    In order to prepare environment for smoke test
+    As cloud admin
+    I want to create user and project
+
+    Scenario: Create admin user
+        Given every service is running:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+        When I create nova admin user "{{user.name}}"
+        Then nova user "{{user.name}}" exists
+
+    Scenario: Create project
+        Given nova user "{{user.name}}" exists
+        When I create nova project "{{project.name}}" for user "{{user.name}}"
+        Then nova project "{{project.name}}" exists
+        And nova user "{{user.name}}" is the manager of the nova project "{{project.name}}"

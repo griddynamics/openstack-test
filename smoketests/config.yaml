@@ -1,0 +1,159 @@
+build_environment: 'master'
+yum_repository: 'openstack-rhel'
+
+cc_external_ip:
+  &cc_ip_value 172.18.40.10
+
+network_interface: bond0
+
+
+compute_nodes:
+ - localhost
+ - *cc_ip_value
+
+
+
+nova:
+  rpm_packages: openstack-nova-node-full
+  conf_file: /etc/nova/nova.conf
+
+db:
+  admin: root
+  admin_pwd: nova
+  name: nova
+  user: nova
+  password: nova
+
+
+user:
+  name: admin1
+
+project:
+  name: project1
+
+network:
+  cidr: 172.30.252.0/22
+  nets: 1
+  ips:  1024
+
+image:
+  path: images/ttylinux.tar.gz
+  url: http://osc-build.vm.griddynamics.net/images/rhel_image.tar.gz
+  disk: rootfs.raw
+  ram: initramfs-2.6.32-131.0.15.el6.x86_64.img
+  kernel: vmlinuz-2.6.32-131.0.15.el6.x86_64
+  name: rhel_image
+
+bundle:
+  image1: test_image_bundle
+  image2: test_image_bundle2
+
+keypair:
+  name: test_key
+
+vm:
+  user: root
+  flavor: m1.tiny
+  name: "rhel_instance1"
+  boot_timeout: 60
+  ping_deadline: 30
+
+instance1: ins1
+instance2: ins2
+
+openstack_services:
+ - nova-api
+ - nova-direct-api
+ - nova-compute
+ - nova-network
+ - nova-scheduler
+ - glance-api
+ - glance-registry
+
+supplementary_services:
+ - rabbitmq-server
+ - mysqld
+ - libvirtd
+
+test_prepequisites:
+ - tar
+ - grep
+ - sed
+ - gawk
+ - unzip
+ - openssh-clients
+ - nc
+ - wget
+ - curl
+ - nmap
+
+packages_to_install:
+ - libvirt
+ - mysql
+ - mysql-server
+ - rabbitmq-server
+ - openstack-nova-node-full
+
+packages_to_clean:
+ - django-file-upload
+ - django-openstack
+ - django-openstack-vnc
+ - openstack-client
+ - openstack-client-doc
+ - openstack-compute
+ - openstack-dashboard
+ - openstack-glance
+ - openstack-glance-doc
+ - openstack-keystone
+ - openstack-nova
+ - openstack-nova-api
+ - openstack-nova-cc-config
+ - openstack-nova-compute
+ - openstack-nova-compute-config
+ - openstack-nova-doc
+ - openstack-nova-instancemonitor
+ - openstack-nova-network
+ - openstack-nova-node-compute
+ - openstack-nova-node-full
+ - openstack-nova-noVNC
+ - openstack-nova-objectstore
+ - openstack-nova-scheduler
+ - openstack-nova-volume
+ - openstackx
+ - python-glance
+ - python-nova
+ - python-novaclient
+ - openstack-swift
+
+dep_wildcards_to_clean:
+ - '*qemu*'
+ - '*libvirt*'
+ - '*guestfs*'
+ - '*openstack*'
+ - '*nova*'
+ - '*glance*'
+ - '*swift*'
+ - '*keystone*'
+ - '*eventlet*'
+
+processes_to_kill:
+ - 'qemu-kvm'
+ - 'dnsmasq'
+
+state_files:
+ - '/etc/libvirt'
+ - '/var/lib/libvirt'
+ - '/var/log/libvirt'
+ - '/var/lib/keystone/keystone.{,token.}db'
+ - '/var/log/keystone/'
+ - '/var/lib/nova'
+ - '/var/log/nova'
+ - '/etc/nova'
+ - '/var/lib/glance'
+ - '/var/log/glance'
+ - '/etc/glance'
+ - '/var/log/rabbitmq/'
+ - '/var/lib/rabbitmq/'
+ - '/tmp/.guestfs*'
+ - '/tmp/tmp*'
+

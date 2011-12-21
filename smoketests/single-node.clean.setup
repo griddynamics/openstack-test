@@ -1,0 +1,123 @@
+Feature: Install OpenStack from scratch on clean environment
+
+    Scenario: Setup yum repositories
+        Given current user can execute sudo without password
+        When I setup OpenStack repository "{{yum_repository}}" for environment "{{build_environment}}"
+        And I clean yum cached data
+        Then yum repository with id "{{yum_repository}}" is configured
+
+
+    Scenario: Install packages
+        Given current user can execute sudo without password
+        And every RPM package available:
+            | PackageName   |
+            {% for package in test_prepequisites %}
+            | {{ package }} |
+            {% endfor %}
+            {% for package in packages_to_install %}
+            | {{ package }} |
+            {% endfor %}
+        When I install RPM package(s):
+            | PackageName   | 
+            {% for package in packages_to_install %}
+            | {{ package }} |
+            {% endfor %}
+            {% for package in test_prepequisites %}
+            | {{ package }} |
+            {% endfor %}
+        Then every RPM package is installed:
+            | PackageName   |
+            {% for package in test_prepequisites %}
+            | {{ package }} |
+            {% endfor %}
+            {% for package in packages_to_install %}
+            | {{ package }} |
+            {% endfor %}
+
+    Scenario: Start supplementary services
+        Given every RPM package is installed:
+            | PackageName   |
+            {% for package in packages_to_install %}
+            | {{ package }} |
+            {% endfor %}
+        When I start services:
+            | ServiceName   |
+            {% for service in supplementary_services %}
+            | {{ service }} |
+            {% endfor %}
+        Then every service is running:
+            | ServiceName   |
+            {% for service in supplementary_services %}
+            | {{ service }} |
+            {% endfor %}
+
+    Scenario: Setup MySQL database
+        Given every service is running:
+            | ServiceName   |
+            {% for service in supplementary_services %}
+            | {{ service }} |
+            {% endfor %}
+        When I create MySQL database "{{db.name}}"
+        And I grant all privileges on database "{{db.name}}" to user "{{db.user}}" identified by password "{{db.password}}" at hosts:
+            | Hostname       |
+            {% for hostname in compute_nodes %}
+            | {{ hostname }} |
+            {% endfor %}
+        And I grant all privileges on database "{{db.name}}" to user "{{db.user}}" identified by password "{{db.password}}" locally
+        Then MySQL database "{{db.name}}" exists
+        And user "{{db.user}}" has all privileges on database "{{db.name}}"
+
+    Scenario: Configure OpenStack compute
+        Given every RPM package is installed:
+            | PackageName   |
+            {% for package in packages_to_install %}
+            | {{ package }} |
+            {% endfor %}
+        When I change flag file "{{nova.conf_file}}" by setting flag values:
+            | Name                      | Value                                         |
+            | --verbose                 | true                                          |
+            | --vlan_interface          | {{network_interface}}                         |
+            | --sql_connection          | mysql://nova:nova@{{cc_external_ip}}/nova     |
+            | --ec2_url                 | http://{{cc_external_ip}}:8773/services/Cloud |
+            | --s3_host                 | {{cc_external_ip}}                            |
+            | --cc_host                 | {{cc_external_ip}}                            |
+            | --rabbit_host             | {{cc_external_ip}}                            |
+            | --sql_connection          | mysql://nova:nova@{{cc_external_ip}}/nova     |
+            | --glance_api_servers      | {{cc_external_ip}}:9292                       |
+            | --vncproxy_url            | http://{{cc_external_ip}}::6080               |
+         Then the following flags in file "{{nova.conf_file}}" are set to:
+            | Name                      | Value                                         |
+            | --verbose                 | true                                          |
+            | --vlan_interface          | {{network_interface}}                         |
+            | --sql_connection          | mysql://nova:nova@{{cc_external_ip}}/nova     |
+            | --ec2_url                 | http://{{cc_external_ip}}:8773/services/Cloud |
+            | --s3_host                 | {{cc_external_ip}}                            |
+            | --cc_host                 | {{cc_external_ip}}                            |
+            | --rabbit_host             | {{cc_external_ip}}                            |
+            | --sql_connection          | mysql://nova:nova@{{cc_external_ip}}/nova     |
+            | --glance_api_servers      | {{cc_external_ip}}:9292                       |
+            | --vncproxy_url            | http://{{cc_external_ip}}::6080               |
+
+
+
+
+    Scenario: Start OpenStack services
+        Given every service is running:
+            | ServiceName   |
+            {% for service in supplementary_services %}
+            | {{ service }} |
+            {% endfor %}
+        And MySQL database "{{db.name}}" exists
+        And user "{{db.user}}" has all privileges on database "{{db.name}}"
+        When I perform Nova DB sync
+        And I start services:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+        Then every service is running:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+
