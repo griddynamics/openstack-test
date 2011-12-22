@@ -204,9 +204,11 @@ def register_all_images(step, name, owner, disk, ram, kernel):
 def image_registered(step, name):
     step_assert(step).assert_true(utils.nova_cli.vm_image_registered(name))
 
-@step(u'I add keypair with name "(.*)"')
-def add_keypair(step, name):
-    step_assert(step).assert_true(utils.nova_cli.add_keypair(name, "~/.ssh/authorized_keys"))
+
+@step(u'I add keypair with name "(.*)" from file "(.*)"')
+def add_keypair(step, name, file):
+    key_path = os.path.join(bunch_working_dir,file)
+    step_assert(step).assert_true(utils.nova_cli.add_keypair(name, key_path))
 
 @step(u'keypair with name "(.*)" exists')
 def keypair_exists(step, name):
@@ -240,7 +242,7 @@ def vm_is_pingable(step, name, timeout):
     assert_true(ip != '', name)
     step_assert(step).assert_true(utils.networking.icmp.probe(ip, int(timeout)))
 
-@step(u'I check that "(.*)" port of VM instance "(.*)" is open and serves "(.*)" protocol')
+@step(u'I see that "(.*)" port of VM instance "(.*)" is open and serves "(.*)" protocol')
 def check_port_protocol(step, port, name, protocol):
     ip = utils.nova_cli.get_instance_ip(name)
     assert_true(ip != '', name)

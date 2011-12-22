@@ -4,24 +4,19 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
     I want to register start instance and verify it is up and available via SSH
 
     Scenario: Setup prerequisites
-        Require setup "single-node ! users ! network ! images"
+        Require setup "single-node ! users ! network ! images ! keys"
 
 
-    Scenario: Register keypair
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        When I add keypair with name "{{keypair.name}}"
-        Then keypair with name "{{keypair.name}}" exists
 
-    Scenario: Start single instance
+    Scenario: Start single instance and bind with pre-uploaded keypair
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM image "{{image.name}}" is registered
-        And keypair with name "{{keypair.name}}" exists
-        When I start VM instance "{{vm.name}}" using image "{{image.name}}",  flavor "{{vm.flavor}}" and keypair "{{keypair.name}}"
+        And keypair with name "{{vm.keypair.name}}" exists
+        When I start VM instance "{{vm.name}}" using image "{{image.name}}",  flavor "{{vm.flavor}}" and keypair "{{vm.keypair.name}}"
         Then VM instance "{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
         And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol
+        And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}"
 
 
-    Scenario: SSH into VM instance
-        Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-        When I check that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol
-        Then I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}"
+    
