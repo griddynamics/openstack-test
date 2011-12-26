@@ -1,0 +1,4 @@
+Feature: Check OpenStack installation and perform package upgrade
+    In order run tests on already deployed and working OpenStack environment
+    As tester
+    I want to verify OpenStack installation and perform package upgrade
