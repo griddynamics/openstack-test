@@ -1,50 +1,23 @@
 import commands
 import os
-import string
 import time
 import re
-import yaml
 import tempfile
 from urlparse import urlparse
 from datetime import datetime
-
+import string
+from collections import namedtuple
+import pexpect
 from nose.tools import assert_equals, assert_true, assert_false
-
-#def assert_lettuce_sentence
-
-#env_dir_path = ''
-#bash_log = ''
-
-def init(dir_path):
-    global env_dir_path, bash_log
-    env_dir_path = dir_path
-    bash_log = os.path.join(env_dir_path, "bash.log")
-
-
-def load_yaml_config(filename):
-    with open(filename, 'r') as config_file:
-        config = yaml.load(config_file)
-        return config
-
-def log(logfile, message):
-    with open(logfile, 'a+b') as file:
-        file.write('%s: %s\n' % (time.ctime(), message))
-
+from pprint import pformat
+import conf
 
 # Make Bash an object
 
 
-
-class bash(object):
-    def __init__(self, cmdline):
-        self.output = self.__execute(cmdline)
-
-    def __execute(self, cmd):
-        log(bash_log, "[COMMAND] " + cmd)
-        retcode = commands.getstatusoutput(cmd)
-        log(bash_log, "[RETCODE] %s" % retcode[0])
-        log(bash_log, "[OUTPUT]\n %s" % retcode[1])
-        return retcode
+class command_output(object):
+    def __init__(self, output):
+        self.output = output
 
     def successful(self):
         return self.output[0] == 0
@@ -59,6 +32,19 @@ class bash(object):
 
     def output_nonempty(self):
         return len(self.output) > 1 and len(self.output[1]) > 0
+
+class bash(command_output):
+    def __init__(self, cmdline):
+        output = self.__execute(cmdline)
+        super(bash,self).__init__(output)
+
+    def __execute(self, cmd):
+        retcode = commands.getstatusoutput(cmd)
+        status, text = retcode
+        conf.bash_log(cmd, status, text)
+        return retcode
+
+
 
 class rpm(object):
 
@@ -290,21 +276,20 @@ class FlagFile(object):
     def overwrite(self, filename):
         return EscalatePermissions.overwrite(filename, self)
 
+class novarc(dict):
+    def __init__(self):
+        super(novarc,self).__init__()
+
+    def load(self, file):
+        self.file = file
+        return os.path.exists(file)
+
+    def source(self):
+        return "source %s" % self.file
+
 class nova_cli(object):
 
     __novarc = None
-
-    class novarc(dict):
-        def __init__(self):
-            super(nova_cli.novarc,self).__init__()
-            self.file = ""
-
-        def load(self, file):
-            self.file = file
-            return os.path.exists(file)
-
-        def source(self):
-            return "source %s" % self.file
 
     @staticmethod
     def novarc_available():
@@ -320,7 +305,7 @@ class nova_cli(object):
     @staticmethod
     def set_novarc(project, user, destination):
         if nova_cli.__novarc is None:
-            new_novarc = nova_cli.novarc()
+            new_novarc = novarc()
             path  = os.path.join(destination, 'novarc.zip')
             out = bash('sudo nova-manage project zipfile %s %s %s' % (project, user, path))
             if out.successful():
@@ -394,7 +379,15 @@ class nova_cli(object):
     def start_vm_instance(name, image_id, flavor_id, key_name=None):
         key_name_arg = "" if key_name is None else "--key_name %s" % key_name
         return nova_cli.exec_novaclient_cmd("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
-         
+
+    @staticmethod
+    def start_vm_instance_return_output(name, image_id, flavor_id, key_name=None):
+        key_name_arg = "" if key_name is None else "--key_name %s" % key_name
+        text =  nova_cli.get_novaclient_command_out("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
+        if text:
+            return ascii_table(text)
+        return None
+
 
     @staticmethod
     def get_flavor_id_list(name):
@@ -488,6 +481,9 @@ class misc(object):
     def install_build_env_repo(repo, env_name=None):
         return EscalatePermissions.overwrite('/etc/yum.repos.d/os-env.repo', EnvironmentRepoWriter(repo,env_name))
 
+    @staticmethod
+    def generate_ssh_keypair(file):
+        return bash("ssh-keygen -N '' -f {file} -t rsa -q".format(file=file)).successful()
 
     @staticmethod
     def can_execute_sudo_without_pwd():
@@ -497,21 +493,90 @@ class misc(object):
                 or out.output_contains_pattern("User root may run the following commands on this host"))
 
 
+class ascii_table(object):
+    def __init__(self, str):
+        self.titles, self.rows = self.__construct(str)
 
-class ssh(bash):
-    def __init__(self, host, command=None, user=None, key=None):
+
+    def __construct(self, str):
+        column_titles = None
+        rows = []
+        for line in str.splitlines():
+            if '|' in line:
+                row =  map(string.strip, line.strip('|').split('|'))
+                if column_titles is None:
+                    column_titles = row
+                else:
+                    rows.append(row)
+
+        Row = namedtuple('Row', column_titles)
+        rows = map(Row._make, rows)
+        return column_titles, rows
+
+    def select_values(self, from_column, where_column, items_equal_to):
+        from_column_number = self.titles.index(from_column)
+        where_column_name_number = self.titles.index(where_column)
+        return [item[from_column_number] for item in self.rows if item[where_column_name_number] == items_equal_to]
+
+class expect(pexpect.spawn):
+    def get_output(self, code_override=None):
+        text_output = "before:\n{before}\nafter:\n{after}".format(
+            before = self.before if isinstance(self.before, basestring) else pformat(self.before, indent=4),
+            after = self.after if isinstance(self.after, basestring) else pformat(self.after, indent=4))
+
+        if code_override is not None:
+            conf.bash_log(pformat(self.args), code_override, text_output)
+            return code_override, text_output
+
+        if self.isalive():
+            conf.bash_log(pformat(self.args), 'Spawned process running: pid={pid}'.format(pid=self.pid), text_output)
+            raise pexpect.ExceptionPexpect('Unable to return exit code. Spawned command is still running:\n' + text_output)
+
+        conf.bash_log(pformat(self.args), self.exitstatus, text_output)
+        return self.exitstatus, text_output
+
+class ssh(command_output):
+    def __init__(self, host, command=None, user=None, key=None, password=None):
+
         options='-q -o StrictHostKeyChecking=no'
         user_prefix = '' if user is None else '%s@' % user
+
+        #if password is None: options += ' -q'
         if key is not None: options += ' -i %s' % key
+
 
         cmd = "ssh {options} {user_prefix}{host} {command}".format(options=options,
                                                                    user_prefix=user_prefix,
                                                                    host=host,
                                                                    command=command)
-        super(ssh,self).__init__(cmd)
 
+        conf.log(conf.get_bash_log_file(),cmd)
 
+        if password is None:
+            super(ssh,self).__init__(bash(cmd).output)
+        else:
+            super(ssh,self).__init__(self.__use_expect(cmd, password))
 
+    def __use_expect(self, cmd, password):
+        spawned = expect(cmd)
+        ssh_newkey = 'Are you sure you want to continue connecting'
+        triggered_index = spawned.expect([pexpect.TIMEOUT, ssh_newkey, 'password:', pexpect.EOF])
+        if triggered_index == 0:
+            return spawned.get_output(-1)
+        elif triggered_index == 1:
+            spawned.sendline ('yes')
+            triggered_index = spawned.expect([pexpect.TIMEOUT, 'password:'])
+            if triggered_index == 0:
+                return spawned.get_output(-1)
+        elif triggered_index == 3:
+            return spawned.get_output(-1)
+
+        spawned.sendline(password)
+        triggered_index = spawned.expect([pexpect.EOF, pexpect.TIMEOUT])
+        if triggered_index == 1:
+            spawned.terminate(force=True)
+
+        return spawned.get_output()
 
 class networking(object):
 

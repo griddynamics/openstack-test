@@ -44,9 +44,6 @@ image:
   kernel: vmlinuz-2.6.32-131.0.15.el6.x86_64
   name: rhel_image
 
-bundle:
-  image1: test_image_bundle
-  image2: test_image_bundle2
 
 
 vm:
@@ -57,7 +54,16 @@ vm:
   ping_deadline: 30
   keypair:
     name: test_key
-    file: id_rsa.pub
+    private: id_rsa_generated
+    public:  id_rsa_generated.pub
+
+vm2:
+  user: root
+  flavor: m1.tiny
+  name: "rhel_instance2"
+  boot_timeout: 60
+  ping_deadline: 30
+
 
 instance1: ins1
 instance2: ins2
@@ -83,10 +89,12 @@ test_prepequisites:
  - gawk
  - unzip
  - openssh-clients
+ - openssh
  - nc
  - wget
  - curl
  - nmap
+ - pexpect
 
 packages_to_install:
  - libvirt
