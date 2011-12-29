@@ -85,7 +85,7 @@ class rpm(object):
 
     @staticmethod
     def available(package):
-        out = bash("sudo yum list | grep '^%s'" % package)
+        out = bash("sudo yum list | grep '^%s\.'" % package)
         return out.successful() and out.output_nonempty()
 
     @staticmethod
@@ -166,6 +166,11 @@ class mysql_cli(object):
         return out
 
     @staticmethod
+    def update_root_pwd( default_pwd="", admin_pwd="root"):
+        out = bash('mysqladmin -u root password %s' %  admin_pwd)
+        return out.successful()
+
+    @staticmethod
     def grant_db_access_for_hosts(hostname,db_name, db_user, db_pwd, admin_name="root", admin_pwd="root"):
         sql_command =  "GRANT ALL PRIVILEGES ON %s.* TO '%s'@'%s' IDENTIFIED BY '%s';" % (db_name, db_user, hostname, db_pwd)
         return mysql_cli.execute(sql_command, admin_name, admin_pwd).successful()
@@ -211,17 +216,17 @@ class service(object):
         out = bash("sudo service %s status" % self.__name)
         return out.successful() \
             and out.output_contains_pattern("(?i)running") \
-            and (not out.output_contains_pattern("(?i)stopped|unrecognized|dead"))
+            and (not out.output_contains_pattern("(?i)stopped|unrecognized|dead|nodedown"))
 
     def stopped(self):
         out = bash("sudo service %s status" % self.__name)
-        unusual_service_patterns = {'rabbitmq-server': 'no.nodes.running'}
+        unusual_service_patterns = {'rabbitmq-server': 'no.nodes.running', 'rabbitmq-server': 'nodedown'}
 
         if self.__name in unusual_service_patterns:
             return out.output_contains_pattern(unusual_service_patterns[self.__name])
 
         return (not out.output_contains_pattern("(?i)running")) \
-            and out.output_contains_pattern("(?i)stopped|unrecognized|dead")
+            and out.output_contains_pattern("(?i)stopped|unrecognized|dead|nodedown")
 
 
 

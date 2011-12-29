@@ -57,7 +57,8 @@ Feature: Install OpenStack from scratch on clean environment
             {% for service in supplementary_services %}
             | {{ service }} |
             {% endfor %}
-        When I create MySQL database "{{db.name}}"
+        When I set MySQL root password to "{{db.admin_pwd}}"
+        And I create MySQL database "{{db.name}}"
         And I grant all privileges on database "{{db.name}}" to user "{{db.user}}" identified by password "{{db.password}}" at hosts:
             | Hostname       |
             {% for hostname in compute_nodes %}

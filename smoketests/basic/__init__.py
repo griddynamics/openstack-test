@@ -73,6 +73,10 @@ def check_rpm_not_installed(step):
     for data in step.hashes:
         step_assert(step).assert_false(utils.rpm.installed(data['PackageName']))
 
+@step(u'I set MySQL root password to "(.*)"')
+def create_mysql_db(step, admin_pwd):
+    step_assert(step).assert_false(utils.mysql_cli.update_root_pwd(admin_pwd = admin_pwd))
+
 @step(u'I create MySQL database "(.*)"')
 def create_mysql_db(step, db_name):
     step_assert(step).assert_true(utils.mysql_cli.create_db(db_name, mysql_admin, mysql_admin_pwd))
