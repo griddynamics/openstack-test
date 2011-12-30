@@ -190,7 +190,7 @@ class service(object):
     def __init__(self, name):
         self.__name = name
         self.__unusual_running_patterns = {'rabbitmq-server': '(Node.*running)|(running_applications)'}
-        self.__unusual_stopped_patterns = {'rabbitmq-server': 'no.nodes.running|nodedown'}
+        self.__unusual_stopped_patterns = {'rabbitmq-server': 'no.nodes.running|no_nodes_running|nodedown'}
         self.__exec_by_expect = set(['rabbitmq-server'])
 
     def __exec_cmd(self, cmd):
@@ -217,7 +217,7 @@ class service(object):
 
     def stopped(self):
 #        out = bash("sudo service %s status" % self.__name)
-        unusual_service_patterns = {'rabbitmq-server': 'no.nodes.running|no_nodes_running|nodedown'}
+#        unusual_service_patterns = {'rabbitmq-server': 'no.nodes.running|no_nodes_running|nodedown'}
         out = self.__exec_cmd("sudo service %s status" % self.__name)
 
         if self.__name in self.__unusual_stopped_patterns:
