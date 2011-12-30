@@ -206,7 +206,7 @@ class service(object):
 
     def stopped(self):
         out = bash("sudo service %s status" % self.__name)
-        unusual_service_patterns = {'rabbitmq-server': 'no.nodes.running', 'rabbitmq-server': 'nodedown'}
+        unusual_service_patterns = {'rabbitmq-server': 'no.nodes.running|no_nodes_running|nodedown'}
 
         if self.__name in unusual_service_patterns:
             return out.output_contains_pattern(unusual_service_patterns[self.__name])
