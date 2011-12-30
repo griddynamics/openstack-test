@@ -102,6 +102,7 @@ packages_to_install:
  - mysql-server
  - rabbitmq-server
  - openstack-nova-node-full
+ - MySQL-python
 
 packages_to_clean:
  - django-file-upload

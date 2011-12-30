@@ -189,27 +189,39 @@ class mysql_cli(object):
 class service(object):
     def __init__(self, name):
         self.__name = name
+        self.__unusual_running_patterns = {'rabbitmq-server': '(Node.*running)|(running_applications)'}
+        self.__unusual_stopped_patterns = {'rabbitmq-server': 'no.nodes.running|nodedown'}
+        self.__exec_by_expect = set(['rabbitmq-server'])
+
+    def __exec_cmd(self, cmd):
+        if self.__name in self.__exec_by_expect:
+            return expect_run(cmd)
+
+        return bash(cmd)
 
     def start(self):
-        out = bash("sudo service %s start" % self.__name)
-        return out.successful()
+        return self.__exec_cmd("sudo service %s start" % self.__name)
 
     def stop(self):
-        out = bash("sudo service %s stop" % self.__name)
-        return out.successful()
+        return self.__exec_cmd("sudo service %s stop" % self.__name)
 
     def running(self):
-        out = bash("sudo service %s status" % self.__name)
+        out = self.__exec_cmd("sudo service %s status" % self.__name)
+
+        if self.__name in self.__unusual_running_patterns:
+            return out.output_contains_pattern(self.__unusual_running_patterns[self.__name])
+
         return out.successful() \
             and out.output_contains_pattern("(?i)running") \
             and (not out.output_contains_pattern("(?i)stopped|unrecognized|dead|nodedown"))
 
     def stopped(self):
-        out = bash("sudo service %s status" % self.__name)
+#        out = bash("sudo service %s status" % self.__name)
         unusual_service_patterns = {'rabbitmq-server': 'no.nodes.running|no_nodes_running|nodedown'}
+        out = self.__exec_cmd("sudo service %s status" % self.__name)
 
-        if self.__name in unusual_service_patterns:
-            return out.output_contains_pattern(unusual_service_patterns[self.__name])
+        if self.__name in self.__unusual_stopped_patterns:
+            return out.output_contains_pattern(self.__unusual_stopped_patterns[self.__name])
 
         return (not out.output_contains_pattern("(?i)running")) \
             and out.output_contains_pattern("(?i)stopped|unrecognized|dead|nodedown")
@@ -518,7 +530,7 @@ class ascii_table(object):
         where_column_name_number = self.titles.index(where_column)
         return [item[from_column_number] for item in self.rows if item[where_column_name_number] == items_equal_to]
 
-class expect(pexpect.spawn):
+class expect_spawn(pexpect.spawn):
     def get_output(self, code_override=None):
         text_output = "before:\n{before}\nafter:\n{after}".format(
             before = self.before if isinstance(self.before, basestring) else pformat(self.before, indent=4),
@@ -534,6 +546,16 @@ class expect(pexpect.spawn):
 
         conf.bash_log(pformat(self.args), self.exitstatus, text_output)
         return self.exitstatus, text_output
+
+class expect_run(command_output):
+    def __init__(self, cmdline):
+        output = self.__execute(cmdline)
+        super(expect_run,self).__init__(output)
+
+    def __execute(self, cmd):
+        text, status = pexpect.run(cmd,withexitstatus=True)
+        conf.bash_log(cmd, status, text)
+        return status, text
 
 class ssh(command_output):
     def __init__(self, host, command=None, user=None, key=None, password=None):
@@ -558,7 +580,7 @@ class ssh(command_output):
             super(ssh,self).__init__(self.__use_expect(cmd, password))
 
     def __use_expect(self, cmd, password):
-        spawned = expect(cmd)
+        spawned = expect_spawn(cmd)
         ssh_newkey = 'Are you sure you want to continue connecting'
         triggered_index = spawned.expect([pexpect.TIMEOUT, ssh_newkey, 'password:', pexpect.EOF])
         if triggered_index == 0:
