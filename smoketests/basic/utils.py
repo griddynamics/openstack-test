@@ -560,12 +560,10 @@ class expect_run(command_output):
 class ssh(command_output):
     def __init__(self, host, command=None, user=None, key=None, password=None):
 
-        options='-q -o StrictHostKeyChecking=no'
+        options='-q -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
         user_prefix = '' if user is None else '%s@' % user
 
-        #if password is None: options += ' -q'
         if key is not None: options += ' -i %s' % key
-
 
         cmd = "ssh {options} {user_prefix}{host} {command}".format(options=options,
                                                                    user_prefix=user_prefix,
@@ -581,16 +579,10 @@ class ssh(command_output):
 
     def __use_expect(self, cmd, password):
         spawned = expect_spawn(cmd)
-        ssh_newkey = 'Are you sure you want to continue connecting'
-        triggered_index = spawned.expect([pexpect.TIMEOUT, ssh_newkey, 'password:', pexpect.EOF])
+        triggered_index = spawned.expect([pexpect.TIMEOUT, pexpect.EOF, 'password:'])
         if triggered_index == 0:
             return spawned.get_output(-1)
         elif triggered_index == 1:
-            spawned.sendline ('yes')
-            triggered_index = spawned.expect([pexpect.TIMEOUT, 'password:'])
-            if triggered_index == 0:
-                return spawned.get_output(-1)
-        elif triggered_index == 3:
             return spawned.get_output(-1)
 
         spawned.sendline(password)
@@ -599,6 +591,7 @@ class ssh(command_output):
             spawned.terminate(force=True)
 
         return spawned.get_output()
+
 
 class networking(object):
 
