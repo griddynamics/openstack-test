@@ -11,8 +11,13 @@ import pexpect
 from nose.tools import assert_equals, assert_true, assert_false
 from pprint import pformat
 import conf
+from lettuce import world
 
 # Make Bash an object
+
+world.instances = {}
+world.images = {}
+world.volumes = {}
 
 
 class command_output(object):
@@ -42,6 +47,10 @@ class bash(command_output):
         retcode = commands.getstatusoutput(cmd)
         status, text = retcode
         conf.bash_log(cmd, status, text)
+
+#        print "cmd: %s" % cmd
+#        print "sta: %s" % status
+#        print "out: %s" % text
         return retcode
 
 
@@ -387,16 +396,34 @@ class nova_cli(object):
         id_list = lines.split(os.linesep)
         return id_list
 
+#    @staticmethod
+#    def start_vm_instance(name, image_id, flavor_id, key_name=None):
+#        key_name_arg = "" if key_name is None else "--key_name %s" % key_name
+#        return nova_cli.exec_novaclient_cmd("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
+
+
     @staticmethod
     def start_vm_instance(name, image_id, flavor_id, key_name=None):
         key_name_arg = "" if key_name is None else "--key_name %s" % key_name
-        return nova_cli.exec_novaclient_cmd("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
+        text = nova_cli.get_novaclient_command_out("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
+        if text:
+            table = ascii_table(text)
+            instance_id = table.select_values('Value', 'Property', 'id')
+            if instance_id:
+                world.instances[name] = instance_id[0]
+                return True
+        return False
+
 
     @staticmethod
     def start_vm_instance_return_output(name, image_id, flavor_id, key_name=None):
         key_name_arg = "" if key_name is None else "--key_name %s" % key_name
         text =  nova_cli.get_novaclient_command_out("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
         if text:
+            table = ascii_table(text)
+            instance_id = table.select_values('Value', 'Property', 'id')
+            if instance_id:
+                world.instances[name] = instance_id[0]
             return ascii_table(text)
         return None
 
@@ -440,11 +467,11 @@ class nova_cli(object):
 
     @staticmethod
     def get_instance_status(name):
-        return nova_cli.get_novaclient_command_out("list | grep %s | sed 's/|.*|.*|\(.*\)|.*|/\\1/'" % name).strip()
+        return nova_cli.get_novaclient_command_out("list | grep %s | sed 's/|.*|.*|\(.*\)|.*|/\\1/'" % world.instances[name]).strip()
 
     @staticmethod
     def get_instance_ip(name):
-        command = "list | grep %s | sed -e 's/|.*|.*|.*|\(.*\)|/\\1/' | sed -r 's/(.*)((\\b[0-9]{1,3}\.){3}[0-9]{1,3}\\b)/\\2/'" % name
+        command = "list | grep %s | sed -e 's/|.*|.*|.*|\(.*\)|/\\1/' | sed -r 's/(.*)((\\b[0-9]{1,3}\.){3}[0-9]{1,3}\\b)/\\2/'" % world.instances[name]
         return nova_cli.get_novaclient_command_out(command).strip()
 
     @staticmethod

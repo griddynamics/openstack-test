@@ -25,6 +25,7 @@ def load_yaml_config(filename):
 def log(logfile, message):
     with open(logfile, 'a+b') as file:
         file.write('%s: %s\n' % (time.ctime(), message))
+        file.close
 
 
 def bash_log(cmd, status, text):

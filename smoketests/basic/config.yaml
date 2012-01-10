@@ -2,9 +2,9 @@ build_environment: 'master'
 yum_repository: 'openstack-rhel'
 
 cc_external_ip:
-  &cc_ip_value 172.18.40.10
+  &cc_ip_value 127.0.0.1
 
-network_interface: bond0
+network_interface: eth0
 
 
 compute_nodes:
@@ -38,7 +38,7 @@ network:
 
 image:
   path: images/ttylinux.tar.gz
-  url: http://osc-build.vm.griddynamics.net/images/rhel_image.tar.gz
+  url: http://127.0.0.1/images/rhel_image.tar.gz
   disk: rootfs.raw
   ram: initramfs-2.6.32-131.0.15.el6.x86_64.img
   kernel: vmlinuz-2.6.32-131.0.15.el6.x86_64
@@ -50,7 +50,7 @@ vm:
   user: root
   flavor: m1.tiny
   name: "rhel_instance1"
-  boot_timeout: 60
+  boot_timeout: 120
   ping_deadline: 30
   keypair:
     name: test_key
@@ -61,7 +61,7 @@ vm2:
   user: root
   flavor: m1.tiny
   name: "rhel_instance2"
-  boot_timeout: 60
+  boot_timeout: 180
   ping_deadline: 30
 
 
@@ -74,8 +74,8 @@ openstack_services:
  - nova-compute
  - nova-network
  - nova-scheduler
- - glance-api
- - glance-registry
+ - openstack-glance-api
+ - openstack-glance-registry
 
 supplementary_services:
  - rabbitmq-server

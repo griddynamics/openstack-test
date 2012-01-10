@@ -5,7 +5,6 @@ import os
 import bunch.special
 import conf
 
-
 dir_path = conf.get_current_module_path(__file__)
 
 conf.init(dir_path)
