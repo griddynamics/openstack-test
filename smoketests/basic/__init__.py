@@ -109,6 +109,11 @@ def start_services(step):
     for data in step.hashes:
         step_assert(step).assert_true(utils.service(data['ServiceName']).start())
 
+@step(u'I restart services:')
+def restart_services(step):
+    for data in step.hashes:
+        step_assert(step).assert_true(utils.service(data['ServiceName']).restart())
+
 
 @step(u'MySQL database "(.*?)" exists')
 def mysql_db_exists(step, db_name):
@@ -149,11 +154,20 @@ def change_flag_file(step,flag_file):
     flags = [(flag['Name'],flag['Value']) for flag in step.hashes ]
     step_assert(step).assert_true(utils.FlagFile(flag_file).apply_flags(flags).overwrite(flag_file))
 
-    
+@step(u'I change flag file "(.*?)" by removing flag values:')
+def change_flag_file(step,flag_file):
+    flags = [(flag['Name']) for flag in step.hashes ]
+    step_assert(step).assert_true(utils.FlagFile(flag_file).remove_flags(flags).overwrite(flag_file))
+
 @step(u'the following flags in file "(.*?)" are set to:')
 def verify_flag_file(step,flag_file):
     flags = [(flag['Name'],flag['Value']) for flag in step.hashes ]
     step_assert(step).assert_true(utils.FlagFile(flag_file).verify(flags))
+
+@step(u'Then the following flags are not in "(.*?)":')
+def verify_flag_not_exist_file(step,flag_file):
+    flags = [(flag['Name']) for flag in step.hashes ]
+    step_assert(step).assert_true(not utils.FlagFile(flag_file).verify_existance(flags))
 
 @step(u'I create nova admin user "(.*?)"')
 def create_nova_admin(step, username):

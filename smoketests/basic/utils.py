@@ -211,6 +211,9 @@ class service(object):
     def start(self):
         return self.__exec_cmd("sudo service %s start" % self.__name)
 
+    def restart(self):
+        return self.__exec_cmd("sudo service %s restart" % self.__name)
+
     def stop(self):
         return self.__exec_cmd("sudo service %s stop" % self.__name)
 
@@ -260,7 +263,6 @@ class FlagFile(object):
                     self.__commented_options.add(option)
                 self.options[option] = value
 
-
     def __load(self, filename):
         EscalatePermissions.read(filename, self)
 
@@ -280,6 +282,11 @@ class FlagFile(object):
             comment_sign = FlagFile.COMMENT_CHAR if option in self.__commented_options else ''
             file.write("%s%s=%s\n" % (comment_sign, option, value))
 
+    def remove_flags(self, flags):
+        for name in flags:
+            del self.options[name]
+        return self
+
     def apply_flags(self, pairs):
         for name, value in pairs:
             self.options[name.strip()] = value.strip()
@@ -291,7 +298,13 @@ class FlagFile(object):
             value = value.strip()
             if name not in self.options or self.options[name] != value:
                 return False
+        return True
 
+    def verify_existance(self, flags):
+        for name in flags:
+            name = name.strip()
+            if name not in self.options:
+                return False
         return True
 
     def overwrite(self, filename):
