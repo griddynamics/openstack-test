@@ -2,7 +2,7 @@ build_environment: 'master'
 yum_repository: 'openstack-rhel'
 
 cc_external_ip:
-  &cc_ip_value 172.18.40.10
+  &cc_ip_value 172.18.198.195
 
 network_interface: bond0
 
@@ -64,6 +64,12 @@ vm2:
   boot_timeout: 60
   ping_deadline: 30
 
+vm3:
+  user: root
+  flavor: m1.tiny
+  name: "singlethone"
+  boot_timeout: 60
+  ping_deadline: 30
 
 instance1: ins1
 instance2: ins2

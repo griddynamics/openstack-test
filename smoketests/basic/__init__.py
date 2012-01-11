@@ -243,6 +243,30 @@ def start_vm_instance(step, name,image, flavor, keyname):
     assert_true(flavor_id != '', flavor_id)
     step_assert(step).assert_true(utils.nova_cli.start_vm_instance(name, image_id, flavor_id, keyname))
 
+@step(u'I start VM instance "(.*?)" using image "(.*?)", flavor "(.*?)"')
+def start_vm_instance_no_keypair(step, name,image, flavor):
+    id_image_list = utils.nova_cli.get_image_id_list(image)
+    assert_equals(len(id_image_list), 1, "There are %s images with name %s: %s" % (len(id_image_list), name, str(id_image_list)))
+    id_flavor_list = utils.nova_cli.get_flavor_id_list(flavor)
+    assert_equals(len(id_flavor_list), 1, "There are %s flavors with name %s: %s" % (len(id_flavor_list), name, str(id_flavor_list)))
+    image_id = id_image_list[0]
+    flavor_id = id_flavor_list[0]
+    assert_true(image_id != '', image_id)
+    assert_true(flavor_id != '', flavor_id)
+    step_assert(step).assert_true(utils.nova_cli.start_vm_instance(name, image_id, flavor_id))
+
+@step(u'I can not start VM instance "(.*?)" using image "(.*?)", flavor "(.*?)"')
+def start_vm_instance(step, name,image, flavor):
+    id_image_list = utils.nova_cli.get_image_id_list(image)
+    assert_equals(len(id_image_list), 1, "There are %s images with name %s: %s" % (len(id_image_list), name, str(id_image_list)))
+    id_flavor_list = utils.nova_cli.get_flavor_id_list(flavor)
+    assert_equals(len(id_flavor_list), 1, "There are %s flavors with name %s: %s" % (len(id_flavor_list), name, str(id_flavor_list)))
+    image_id = id_image_list[0]
+    flavor_id = id_flavor_list[0]
+    assert_true(image_id != '', image_id)
+    assert_true(flavor_id != '', flavor_id)
+    step_assert(step).assert_false(utils.nova_cli.start_vm_instance(name, image_id, flavor_id))
+
 @step(u'I start VM instance "(.*?)" using image "(.*?)",  flavor "(.*?)" and save auto-generated password')
 def start_vm_instance_save_root_pwd(step, name,image, flavor):
     id_image_list = utils.nova_cli.get_image_id_list(image)
