@@ -316,17 +316,33 @@ def check_can_log_via_ssh_using_saved_pwd(step, name, user):
 def create_loop_device_in_file(step, source_dev, source_file, source_size):
     step_assert(step).assert_true(utils.misc.create_loop_dev(loop_dev=source_dev, loop_file=source_file, loop_size=source_size))
 
-#@step(u'I create virtual storage device "(.*?)"')
-#def create_virtual_storage_device(step, source_dev, source_size):
-#    pass
+@step(u'I remove loop device "(.*?)"')
+def remove_virtual_storage_device(step, source_dev):
+    step_assert(step).assert_true(utils.misc.delete_loop_dev(loop_dev=source_dev))
+
+@step(u'I see loop device "(.*?)" available')
+def check_loop_device_available(step, source_dev):
+    step_assert(step).assert_true(utils.misc.check_loop_dev_exist(loop_dev=source_dev))
+
+@step(u'I see loop device "(.*?)" removed')
+def check_loop_device_unavailable(step, source_dev):
+    step_assert(step).assert_false(utils.misc.check_loop_dev_exist(loop_dev=source_dev))
 
 @step(u'I create lvm group "(.*?)" on device "(.*?)"')
 def create_lvm_group(step, lvm_group, source_dev):
     step_assert(step).assert_true(utils.misc.create_lvm(lvm_dev=source_dev,lvm_group=lvm_group))
 
-@step(u'I see lvm group "(.*?)" available')
-def check_lvm_group_available(step, lvm_group):
-    pass
+@step(u'I remove lvm group "(.*?)" on device "(.*?)"')
+def remove_lvm_group(step, lvm_group, source_dev):
+    step_assert(step).assert_true(utils.misc.delete_lvm(lvm_dev=source_dev,lvm_group=lvm_group))
+
+@step(u'I see lvm group "(.*?)" on device "(.*?)" available')
+def check_lvm_group_available(step, lvm_group, source_dev):
+    step_assert(step).assert_true(utils.misc.check_lvm_available(lvm_dev=source_dev,lvm_group=lvm_group))
+
+@step(u'I see lvm group "(.*?)" on device "(.*?)" removed')
+def check_lvm_group_unavailable(step, lvm_group, source_dev):
+    step_assert(step).assert_false(utils.misc.check_lvm_available(lvm_dev=source_dev,lvm_group=lvm_group))
 
 @step(u'I create volume "(.*?)" with size of "(.*?)" in zone "(.*?)"')
 def create_volume(step, volume_name, volume_size, volume_zone):

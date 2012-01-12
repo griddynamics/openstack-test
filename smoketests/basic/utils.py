@@ -649,10 +649,18 @@ class misc(object):
     def create_loop_dev(loop_dev,loop_file,loop_size):
         return bash("dd if=/dev/zero of=%s bs=1024 count=%s" % (loop_file, int(loop_size)*1024*1024)).successful() and bash("losetup %s %s" % (loop_dev,loop_file)).successful()
 
+    @staticmethod
     def delete_loop_dev(loop_dev,loop_file=""):
         if not loop_file:
-            loop_file = bash("losetup %s | sed 's/.*(\(.*\)).*/\1/'", loop_dev)
+            loop_file = bash("losetup %s | sed 's/.*(\(.*\)).*/\1/'" % loop_dev).output_text()[0]
         return bash("losetup -d %s" % loop_dev).successful() and bash("rm -f %s" % loop_file).successful()
+
+    @staticmethod
+    def check_loop_dev_exist(loop_dev):
+        out = bash("pvscan -s | grep %s" % loop_dev).output_text()
+        if loop_dev in out:
+            return True
+        return False
 
     @staticmethod
     def create_lvm(lvm_dev,lvm_group="nova-volumes"):
@@ -661,6 +669,15 @@ class misc(object):
     @staticmethod
     def delete_lvm(lvm_dev,lvm_group="nova-volumes"):
         return bash("vgremove -f %s" % lvm_group).successful() and bash("pvremove -y -ff %s" % lvm_dev).successful()
+
+    @staticmethod
+    def check_lvm_available(lvm_dev,lvm_group="nova-volumes"):
+        out = bash("vgscan | grep %s" % lvm_dev).output_text()
+        out1 = bash("pvscan | grep %s" % lvm_group).output_text()
+        if lvm_dev in out:
+            if (lvm_dev in out1) and (lvm_group in out1):
+                return True
+        return False
 
     @staticmethod
     def get_euca_id(nova_id=None, name=None):

@@ -178,7 +178,6 @@ volume:
 volume_packages:
  - scsi-target-utils
  - lvm2
- - openstack-nova-volume
 
 volume_services1:
  - tgtd
