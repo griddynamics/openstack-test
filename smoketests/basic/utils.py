@@ -672,9 +672,9 @@ class misc(object):
 
     @staticmethod
     def check_lvm_available(lvm_dev,lvm_group="nova-volumes"):
-        out = bash("vgscan | grep %s" % lvm_dev).output_text()
+        out = bash("vgscan | grep %s" % lvm_group).output_text()
         out1 = bash("pvscan | grep %s" % lvm_group).output_text()
-        if lvm_dev in out:
+        if lvm_group in out:
             if (lvm_dev in out1) and (lvm_group in out1):
                 return True
         return False
