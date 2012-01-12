@@ -30,4 +30,11 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
 
     Scenario: Start multiple instances with same name
         When I start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
+        And I change flag file "{{nova.conf_file}}" by setting flag values:
+                                      |     Name           | Value |
+                                      | project_uniq_names | true  |
         Then I can not start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
+        When I change flag file "{{nova.conf_file}}" by setting flag values:
+                                      |     Name           | Value |
+                                      | project_uniq_names | false |
+        Then I start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
