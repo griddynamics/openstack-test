@@ -211,11 +211,11 @@ class service(object):
     def start(self):
         return self.__exec_cmd("sudo service %s start" % self.__name)
 
-    def restart(self):
-        return self.__exec_cmd("sudo service %s restart" % self.__name)
-
     def stop(self):
         return self.__exec_cmd("sudo service %s stop" % self.__name)
+
+    def restart(self):
+        return self.__exec_cmd("sudo service %s restart" % self.__name)
 
     def running(self):
         out = self.__exec_cmd("sudo service %s status" % self.__name)
@@ -262,6 +262,7 @@ class FlagFile(object):
                 if comment:
                     self.__commented_options.add(option)
                 self.options[option] = value
+
 
     def __load(self, filename):
         EscalatePermissions.read(filename, self)
@@ -480,12 +481,20 @@ class nova_cli(object):
 
     @staticmethod
     def get_instance_status(name):
-        return nova_cli.get_novaclient_command_out("list | grep %s | sed 's/|.*|.*|\(.*\)|.*|/\\1/'" % world.instances[name]).strip()
+        text = nova_cli.get_novaclient_command_out("list")
+        if text:
+            table = ascii_table(text)
+            return table.select_values('Status', 'ID',world.instances[name])[0]
+        return False
 
     @staticmethod
     def get_instance_ip(name):
-        command = "list | grep %s | sed -e 's/|.*|.*|.*|\(.*\)|/\\1/' | sed -r 's/(.*)((\\b[0-9]{1,3}\.){3}[0-9]{1,3}\\b)/\\2/'" % world.instances[name]
-        return nova_cli.get_novaclient_command_out(command).strip()
+        text = nova_cli.get_novaclient_command_out("list")
+        if text:
+            table = ascii_table(text)
+            (status,ip) = table.select_values('Networks', 'ID',world.instances[name])[0].split('=')
+            return ip
+        return False
 
     @staticmethod
     def wait_instance_comes_up(name, timeout):
@@ -500,6 +509,98 @@ class nova_cli(object):
             else:
                 break
         return status == 'ACTIVE'
+
+
+class euca_cli(object):
+
+    @staticmethod
+    def volume_create(name,size,zone='nova'):
+        out = bash("euca-create-volume --size %s --zone %s|grep VOLUME| awk '{print $2}'" % (size, zone))
+        if out:
+            euca_id = out.output_text().split()[0] 
+            world.volumes[name] = misc.get_nova_id(euca_id)
+        return out.successful()
+
+    @staticmethod
+    def get_volume_status(volume_name):
+#        world.volumes[volume_name]=23
+        volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
+        out = bash("euca-describe-volumes |grep %s" % volume_id).output_text()
+
+        badchars=['(', ')', ',']
+        for char in badchars:
+            out=out.replace(char, ' ')
+        k=1
+        status={}
+        values=out.split()
+        if values:
+            for key in ('volume_id', 'size', 'zone', 'status', 'project', 'host', 'instance', 'device', 'date'):
+                status[key]=values[k]
+                k=k+1
+            if status['instance'] != 'None':
+                ins = status['instance']
+                ins = ins.replace(']','')
+                status['instance'], status['instance-host'] = ins.split('[')
+        return status
+
+
+    @staticmethod
+    def wait_volume_comes_up(volume_name, timeout):
+        poll_interval = 5
+        time_left = int(timeout)
+        while time_left > 0:
+            status = euca_cli.get_volume_status(volume_name)['status']
+            if status != 'available':
+                time.sleep(poll_interval)
+                time_left -= poll_interval
+            else:
+                break
+        return status == 'available'
+
+    @staticmethod
+    def volume_attach(instance_name, dev, volume_name):
+        volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
+        instance_id='i-'+misc.get_euca_id(nova_id=world.instances[instance_name])
+        out = bash('euca-attach-volume --instance %s --device %s %s' % (instance_id, dev, volume_id))
+        time.sleep(30)
+        return out.successful()
+
+    @staticmethod
+    def volume_attached_to_instance(volume_name, instance_name):
+        volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
+        instance_id='i-'+misc.get_euca_id(nova_id=world.instances[instance_name])
+        status = euca_cli.get_volume_status(volume_name)
+        if ('in-use' in status['status']) and (instance_id in status['instance']):
+            return True
+        return False
+
+    @staticmethod
+    def volume_detach(volume_name):
+        volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
+        out = bash('euca-detach-volume %s' % volume_id)
+        time.sleep(30)
+        return out.successful()
+
+    @staticmethod
+    def wait_volume_deletes(volume_name, timeout):
+        poll_interval = 5
+        time_left = int(timeout)
+        while time_left > 0:
+            try:
+                status = euca_cli.get_volume_status(volume_name)['status']
+            except:
+                return True
+            if status == 'deleting':
+                time.sleep(poll_interval)
+                time_left -= poll_interval
+            else:
+                return False
+        return False
+
+    @staticmethod
+    def volume_delete(name,size,zone='nova'):
+        out = bash("euca-delete-volume %s")
+        return out.successful()
 
 
 class misc(object):
@@ -543,6 +644,39 @@ class misc(object):
         return out.successful() and out.output_nonempty() \
             and (out.output_contains_pattern("\(ALL\)(\s)*NOPASSWD:(\s)*ALL")
                 or out.output_contains_pattern("User root may run the following commands on this host"))
+
+    @staticmethod
+    def create_loop_dev(loop_dev,loop_file,loop_size):
+        return bash("dd if=/dev/zero of=%s bs=1024 count=%s" % (loop_file, int(loop_size)*1024*1024)).successful() and bash("losetup %s %s" % (loop_dev,loop_file)).successful()
+
+    def delete_loop_dev(loop_dev,loop_file=""):
+        if not loop_file:
+            loop_file = bash("losetup %s | sed 's/.*(\(.*\)).*/\1/'", loop_dev)
+        return bash("losetup -d %s" % loop_dev).successful() and bash("rm -f %s" % loop_file).successful()
+
+    @staticmethod
+    def create_lvm(lvm_dev,lvm_group="nova-volumes"):
+        return bash("pvcreate %s" % lvm_dev).successful() and bash("vgcreate %s %s" % (lvm_group,lvm_dev)).successful()
+
+    @staticmethod
+    def delete_lvm(lvm_dev,lvm_group="nova-volumes"):
+        return bash("vgremove -f %s" % lvm_group).successful() and bash("pvremove -y -ff %s" % lvm_dev).successful()
+
+    @staticmethod
+    def get_euca_id(nova_id=None, name=None):
+        if nova_id:
+            return '{0:008x}'.format(int(nova_id))
+        elif name:
+            return 'TODO'
+        else: return False
+
+    @staticmethod
+    def get_nova_id(euca_id=None, name=None):
+        if euca_id:
+            return int(euca_id.split('-')[1],16)
+        elif name:
+            return 'TODO'
+        else: return False
 
 
 class ascii_table(object):
@@ -668,9 +802,4 @@ class networking(object):
         @staticmethod
         def open_port_serves_protocol(host, port, proto):
             return bash('nmap -PN -p %s --open -sV %s | grep -iE "open.*%s"' % (port, host, proto)).successful()
-
-
-        
-            
-
 

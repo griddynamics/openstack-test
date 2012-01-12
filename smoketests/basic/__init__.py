@@ -159,6 +159,7 @@ def change_flag_file(step,flag_file):
     flags = [(flag['Name']) for flag in step.hashes ]
     step_assert(step).assert_true(utils.FlagFile(flag_file).remove_flags(flags).overwrite(flag_file))
 
+
 @step(u'the following flags in file "(.*?)" are set to:')
 def verify_flag_file(step,flag_file):
     flags = [(flag['Name'],flag['Value']) for flag in step.hashes ]
@@ -309,3 +310,45 @@ def check_can_log_via_ssh_using_saved_pwd(step, name, user):
     assert_true(world.saved_root_password is not None)
     conf.log(conf.get_bash_log_file(),"load world.saved_root_password=%s" % world.saved_root_password)
     step_assert(step).assert_true(utils.ssh(ip, command="/bin/ls -l /", user=user, password=world.saved_root_password).successful())
+
+
+@step(u'I create loop device "(.*?)" in file "(.*?)" with size "(.*?)" gigabytes')
+def create_loop_device_in_file(step, source_dev, source_file, source_size):
+    step_assert(step).assert_true(utils.misc.create_loop_dev(loop_dev=source_dev, loop_file=source_file, loop_size=source_size))
+
+#@step(u'I create virtual storage device "(.*?)"')
+#def create_virtual_storage_device(step, source_dev, source_size):
+#    pass
+
+@step(u'I create lvm group "(.*?)" on device "(.*?)"')
+def create_lvm_group(step, lvm_group, source_dev):
+    step_assert(step).assert_true(utils.misc.create_lvm(lvm_dev=source_dev,lvm_group=lvm_group))
+
+@step(u'I see lvm group "(.*?)" available')
+def check_lvm_group_available(step, lvm_group):
+    pass
+
+@step(u'I create volume "(.*?)" with size of "(.*?)" in zone "(.*?)"')
+def create_volume(step, volume_name, volume_size, volume_zone):
+    step_assert(step).assert_true(utils.euca_cli.volume_create(name=volume_name, size=volume_size, zone=volume_zone))
+
+@step(u'volume "(.*?)" comes up within "(.*?)" seconds')
+def check_volume_comes_up(step, volume_name, timeout):
+    step_assert(step).assert_true(utils.euca_cli.wait_volume_comes_up(volume_name=volume_name, timeout=timeout))
+
+@step(u'I see volume "(.*?)" available')
+def check_volume_available(step, volume_name):
+    step_assert(step).assert_equals(utils.euca_cli.get_volume_status(volume_name=volume_name)['status'], 'available', 'Volume is not available')
+
+@step(u'I attach volume "(.*?)" to VM instance "(.*?)" as device "(.*?)"')
+def attach_volume(step, volume_name, instance_name, volume_dev):
+    step_assert(step).assert_true(utils.euca_cli.volume_attach(instance_name=instance_name, dev=volume_dev, volume_name=volume_name))
+
+@step(u'I see volume "(.*?)" attached to VM instance "(.*?)"')
+def check_volume_attached(step, volume_name, instance_name):
+    step_assert(step).assert_true(utils.euca_cli.volume_attached_to_instance(instance_name=instance_name, volume_name=volume_name))
+
+@step(u'I detach volume "(.*?)"')
+def attach_volume(step, volume_name):
+    step_assert(step).assert_true(utils.euca_cli.volume_detach(volume_name=volume_name))
+

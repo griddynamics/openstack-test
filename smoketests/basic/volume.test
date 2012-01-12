@@ -1,0 +1,41 @@
+Feature: Test nova volume
+    In order to smoke test Volume functionality
+    As tester
+    I want to start instance, create volume and test it can be used within instance
+
+
+#    Scenario: Setup prerequisites
+#        Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys ! volume-services ! volume"
+
+
+    Scenario: Start single instance and bind with pre-uploaded keypair
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And VM image "{{image.name}}" is registered
+        And keypair with name "{{vm.keypair.name}}" exists
+        When I start VM instance "{{vm.name}}" using image "{{image.name}}",  flavor "{{vm.flavor}}" and keypair "{{vm.keypair.name}}"
+        Then VM instance "{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
+        And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol
+#        And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}"
+
+    Scenario: Create volume
+        Given every service is running:
+            | ServiceName   |
+            {% for service in volume_services2 %}
+            | {{ service }} |
+            {% endfor %}
+        When I create volume "{{volume.name1}}" with size of "{{volume.size1}}" in zone "{{volume.zone}}"
+        Then volume "{{volume.name1}}" comes up within "{{vm.boot_timeout}}" seconds
+
+    Scenario: Attach volume to instance
+        Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        And I see volume "{{volume.name1}}" available
+        When I attach volume "{{volume.name1}}" to VM instance "{{vm.name}}" as device "{{volume.dev1}}"
+        Then I see volume "{{volume.name1}}" attached to VM instance "{{vm.name}}"
+
+    Scenario: Detach volume
+        Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        And I see volume "{{volume.name1}}" attached to VM instance "{{vm.name}}"
+        When I detach volume "{{volume.name1}}"
+        Then I see volume "{{volume.name1}}" available
+

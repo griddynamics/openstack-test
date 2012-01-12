@@ -1,0 +1,69 @@
+Feature: Install, start services and create virtual disk needed to test volume
+    In order to test volume functionality
+    As tester
+    I want to install services
+
+    Scenario: Install packages
+        Given every RPM package available:
+            | PackageName   |
+            {% for package in volume_packages %}
+            | {{ package }} |
+            {% endfor %}
+        When I install RPM package(s):
+            | PackageName   |
+            {% for package in volume_packages %}
+            | {{ package }} |
+            {% endfor %}
+        Then every RPM package is installed:
+            | PackageName   |
+            {% for package in volume_packages %}
+            | {{ package }} |
+            {% endfor %}
+
+    Scenario: Start iscsi services
+        Given every RPM package is installed:
+            | PackageName   |
+            {% for package in volume_packages %}
+            | {{ package }} |
+            {% endfor %}
+        When I start services:
+            | ServiceName   |
+            {% for service in volume_services1 %}
+            | {{ service }} |
+            {% endfor %}
+        Then every service is running:
+            | ServiceName   |
+            {% for service in volume_services1 %}
+            | {{ service }} |
+            {% endfor %}
+
+    Scenario: Create volume
+        Given every service is running:
+            | ServiceName   |
+            {% for service in volume_services1 %}
+            | {{ service }} |
+            {% endfor %}
+        When I create loop device "{{volume.source_dev}}" in file "{{volume.source_dev_file}}" with size "{{volume.source_dev_size}}" gigabytes
+#        And I create virtual storage device "{{volume.source_dev}}"
+        And I create lvm group "nova-volumes" on device "{{volume.source_dev}}"
+        Then I see lvm group "nova-volumes" available
+
+
+    Scenario: Start nova-volume services
+        Given every RPM package is installed:
+            | PackageName   |
+            {% for package in volume_packages %}
+            | {{ package }} |
+            {% endfor %}
+        When I start services:
+            | ServiceName   |
+            {% for service in volume_services2 %}
+            | {{ service }} |
+            {% endfor %}
+        Then every service is running:
+            | ServiceName   |
+            {% for service in volume_services2 %}
+            | {{ service }} |
+            {% endfor %}
+
+

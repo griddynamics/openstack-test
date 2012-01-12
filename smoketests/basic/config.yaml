@@ -24,7 +24,6 @@ db:
   user: nova
   password: nova
 
-
 user:
   name: admin1
 
@@ -44,13 +43,11 @@ image:
   kernel: vmlinuz-2.6.32-131.0.15.el6.x86_64
   name: rhel_image
 
-
-
 vm:
   user: root
   flavor: m1.tiny
   name: "rhel_instance1"
-  boot_timeout: 120
+  boot_timeout: 60
   ping_deadline: 30
   keypair:
     name: test_key
@@ -167,3 +164,24 @@ state_files:
  - '/tmp/.guestfs*'
  - '/tmp/tmp*'
 
+volume:
+  source_dev:  '/dev/loop4'
+  source_dev_file: '/tmp/loop4'
+  source_dev_size: 1
+  group: nova-volumes
+  name1:   vol1
+  dev1:   '/dev/vdb'
+  size1: 1
+  zone: nova
+  attach_deadline: 60
+
+volume_packages:
+ - scsi-target-utils
+ - lvm2
+ - openstack-nova-volume
+
+volume_services1:
+ - tgtd
+
+volume_services2:
+ - nova-volume
