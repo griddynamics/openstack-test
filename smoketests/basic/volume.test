@@ -4,24 +4,21 @@ Feature: Test nova volume
     I want to start instance, create volume and test it can be used within instance
 
 
-#    Scenario: Setup prerequisites
-#        Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys ! volume-services ! volume"
-
     Scenario: Setup prerequisites
-        Require setup "novaclient-keys"
+        Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys ! volume-services"
 
-    Scenario: Start instance
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        And VM image "{{image.name}}" is registered
-        And keypair with name "{{vm.keypair.name}}" exists
-        When I start VM instance "{{vm.name}}" using image "{{image.name}}",  flavor "{{vm.flavor}}" and keypair "{{vm.keypair.name}}"
-        Then VM instance "{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
-        And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-        And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol
-        And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}"
-        And I login to VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}" and run commands:
-            |  Command  |   Expected  |
-            |   whoami  |   root      |
+#    Scenario: Start instance
+#        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+#        And VM image "{{image.name}}" is registered
+#        And keypair with name "{{vm.keypair.name}}" exists
+#        When I start VM instance "{{vm.name}}" using image "{{image.name}}",  flavor "{{vm.flavor}}" and keypair "{{vm.keypair.name}}"
+#        Then VM instance "{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
+#        And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+#        And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol
+#        And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}"
+#        And I login to VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}" and run commands:
+#            |  Command  |   Expected  |
+#            |   whoami  |   root      |
 
 
     Scenario: Create volume
@@ -62,15 +59,15 @@ Feature: Test nova volume
         When I detach volume "{{volume.name}}"
         Then I see volume "{{volume.name}}" available
 
-    Scenario: Start second instance
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        And VM image "{{image.name}}" is registered
-        And keypair with name "{{vm.keypair.name}}" exists
-        When I start VM instance "{{vm2.name}}" using image "{{image.name}}",  flavor "{{vm2.flavor}}" and keypair "{{vm.keypair.name}}"
-        Then VM instance "{{vm2.name}}" comes up within "{{vm2.boot_timeout}}" seconds
-        And VM instance "{{vm2.name}}" is pingable within "{{vm2.ping_deadline}}" seconds
-        And I see that "ssh" port of VM instance "{{vm2.name}}" is open and serves "ssh" protocol
-        And I can log into VM "{{vm2.name}}" via SSH as "{{vm2.user}}" with key "{{vm.keypair.private}}"
+#    Scenario: Start second instance
+#        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+#        And VM image "{{image.name}}" is registered
+#        And keypair with name "{{vm.keypair.name}}" exists
+#        When I start VM instance "{{vm2.name}}" using image "{{image.name}}",  flavor "{{vm2.flavor}}" and keypair "{{vm.keypair.name}}"
+#        Then VM instance "{{vm2.name}}" comes up within "{{vm2.boot_timeout}}" seconds
+#        And VM instance "{{vm2.name}}" is pingable within "{{vm2.ping_deadline}}" seconds
+#        And I see that "ssh" port of VM instance "{{vm2.name}}" is open and serves "ssh" protocol
+#        And I can log into VM "{{vm2.name}}" via SSH as "{{vm2.user}}" with key "{{vm.keypair.private}}"
 
 
     Scenario: Attach volume to second instance
