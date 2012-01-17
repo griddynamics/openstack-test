@@ -2,7 +2,7 @@ Feature: Create user and project using python-novaclient CLI
     In order to prepare environment for smoke test
     As cloud admin
     I want to register images
-    
+
     Scenario: Upload and register images
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM image tarball is available at "{{image.url}}"

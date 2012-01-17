@@ -7,8 +7,10 @@ Feature: Test nova volume
 #    Scenario: Setup prerequisites
 #        Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys ! volume-services ! volume"
 
+    Scenario: Setup prerequisites
+        Require setup "novaclient-keys"
 
-    Scenario: Start single instance and bind with pre-uploaded keypair
+    Scenario: Start instance
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM image "{{image.name}}" is registered
         And keypair with name "{{vm.keypair.name}}" exists
@@ -16,7 +18,11 @@ Feature: Test nova volume
         Then VM instance "{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
         And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
         And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol
-#        And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}"
+        And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}"
+        And I login to VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}" and run commands:
+            |  Command  |   Expected  |
+            |   whoami  |   root      |
+
 
     Scenario: Create volume
         Given every service is running:
@@ -24,18 +30,104 @@ Feature: Test nova volume
             {% for service in volume_services2 %}
             | {{ service }} |
             {% endfor %}
-        When I create volume "{{volume.name1}}" with size of "{{volume.size1}}" in zone "{{volume.zone}}"
-        Then volume "{{volume.name1}}" comes up within "{{vm.boot_timeout}}" seconds
+        When I create volume "{{volume.name}}" with size of "{{volume.size}}" in zone "{{volume.zone}}"
+        Then volume "{{volume.name}}" comes up within "{{vm.boot_timeout}}" seconds
 
     Scenario: Attach volume to instance
         Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-        And I see volume "{{volume.name1}}" available
-        When I attach volume "{{volume.name1}}" to VM instance "{{vm.name}}" as device "{{volume.dev1}}"
-        Then I see volume "{{volume.name1}}" attached to VM instance "{{vm.name}}"
+        And I see volume "{{volume.name}}" available
+        When I attach volume "{{volume.name}}" to VM instance "{{vm.name}}" as device "{{volume.dev}}"
+        Then I see volume "{{volume.name}}" attached to VM instance "{{vm.name}}"
+
+    Scenario: Check volume is accessible inside instance
+        Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        And I see volume "{{volume.name}}" attached to VM instance "{{vm.name}}"
+        And keypair with name "{{vm.keypair.name}}" exists
+        When I login to VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}" and run commands:
+            |  Command  |   Expected  |
+            | mkfs "{{volume.dev}}"                                   |  noFail  |
+            | mkdir  "{{volume.dir}}"                                  |  noFail  |
+            | mount -t ext2 "{{volume.dev}}" "{{volume.dir}}"         |  noFail  |
+            | grep   "{{volume.dir}}" /proc/mounts                     |  "{{volume.dev}}"  |
+            | mkdir  "{{volume.dir}}"/testDir                          |  noFail  |
+            | echo   "volTest" > "{{volume.dir}}"testDir/testFile      |  noFail  |
+            | umount "{{volume.dir}}"                                  |  noFail  |
+            | mount -t ext2 "{{volume.dev}}" "{{volume.dir}}"         |  noFail  |
+            | cat    "{{volume.dir}}"/testDir/testFile                  |  volTest  |
+            | umount "{{volume.dir}}"                                  |  noFail  |
+        Then commands are executed without errors
 
     Scenario: Detach volume
+        Given I see volume "{{volume.name}}" attached to VM instance "{{vm.name}}"
+        When I detach volume "{{volume.name}}"
+        Then I see volume "{{volume.name}}" available
+
+    Scenario: Start second instance
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And VM image "{{image.name}}" is registered
+        And keypair with name "{{vm.keypair.name}}" exists
+        When I start VM instance "{{vm2.name}}" using image "{{image.name}}",  flavor "{{vm2.flavor}}" and keypair "{{vm.keypair.name}}"
+        Then VM instance "{{vm2.name}}" comes up within "{{vm2.boot_timeout}}" seconds
+        And VM instance "{{vm2.name}}" is pingable within "{{vm2.ping_deadline}}" seconds
+        And I see that "ssh" port of VM instance "{{vm2.name}}" is open and serves "ssh" protocol
+        And I can log into VM "{{vm2.name}}" via SSH as "{{vm2.user}}" with key "{{vm.keypair.private}}"
+
+
+    Scenario: Attach volume to second instance
+        Given VM instance "{{vm2.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        And I see volume "{{volume.name}}" available
+        When I attach volume "{{volume.name}}" to VM instance "{{vm2.name}}" as device "{{volume.dev}}"
+        Then I see volume "{{volume.name}}" attached to VM instance "{{vm2.name}}"
+
+    Scenario: Check volume data saved and can be accessible on second instance
+        Given VM instance "{{vm2.name}}" is pingable within "{{vm2.ping_deadline}}" seconds
+        And I see volume "{{volume.name}}" attached to VM instance "{{vm2.name}}"
+        And keypair with name "{{vm.keypair.name}}" exists
+        When I login to VM "{{vm2.name}}" via SSH as "{{vm2.user}}" with key "{{vm.keypair.private}}" and run commands:
+            |  Command  |   Expected  |
+            | mkdir  "{{volume.dir}}"                                  |  noFail  |
+            | mount -t ext2 "{{volume.dev}}" "{{volume.dir}}"         |  noFail  |
+            | grep   "{{volume.dir}}" /proc/mounts                     |  "{{volume.dev}}"  |
+            | cat    "{{volume.dir}}"/testDir/testFile                 |  volTest  |
+            | umount "{{volume.dir}}"                                  |  noFail  |
+        Then commands are executed without errors
+
+    Scenario: Create second volume
+        Given every service is running:
+            | ServiceName   |
+            {% for service in volume_services2 %}
+            | {{ service }} |
+            {% endfor %}
+        When I create volume "{{volume1.name}}" with size of "{{volume1.size}}" in zone "{{volume1.zone}}"
+        Then volume "{{volume1.name}}" comes up within "{{volume1.timeout}}" seconds
+
+    Scenario: Attach second volume to instance
+        Given VM instance "{{vm2.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        And I see volume "{{volume1.name}}" available
+        When I attach volume "{{volume1.name}}" to VM instance "{{vm2.name}}" as device "{{volume1.dev}}"
+        Then I see volume "{{volume1.name}}" attached to VM instance "{{vm2.name}}"
+
+    Scenario: Detach volumes
+        Given I see volume "{{volume.name}}" attached to VM instance "{{vm2.name}}"
+        And I see volume "{{volume1.name}}" attached to VM instance "{{vm2.name}}"
+        When I detach volume "{{volume.name}}"
+        And I detach volume "{{volume1.name}}"
+        Then I see volume "{{volume.name}}" available
+        Then I see volume "{{volume1.name}}" available
+
+    Scenario: Delete volume
+        Given I see volume "{{volume.name}}" available
+        And I see volume "{{volume1.name}}" available
+        When I remove volume "{{volume.name}}"
+        And I remove volume "{{volume1.name}}"
+        Then I see volume "{{volume.name}}" removed
+        And I see volume "{{volume1.name}}" removed
+
+    Scenario: Stop instances
         Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-        And I see volume "{{volume.name1}}" attached to VM instance "{{vm.name}}"
-        When I detach volume "{{volume.name1}}"
-        Then I see volume "{{volume.name1}}" available
+        And VM instance "{{vm2.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        When I stop VM instance "{{vm.name}}"
+        And I stop VM instance "{{vm2.name}}"
+        Then VM instance "{{vm.name}}" is stopped within "{{vm.boot_timeout}}" seconds
+        And VM instance "{{vm2.name}}" is stopped within "{{vm.boot_timeout}}" seconds
 

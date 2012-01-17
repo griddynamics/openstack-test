@@ -45,10 +45,10 @@ image:
 
 vm:
   user: root
-  flavor: m1.tiny
+  flavor: m1.small
   name: "rhel_instance1"
-  boot_timeout: 60
-  ping_deadline: 30
+  boot_timeout: 180
+  ping_deadline: 90
   keypair:
     name: test_key
     private: id_rsa_generated
@@ -56,14 +56,14 @@ vm:
 
 vm2:
   user: root
-  flavor: m1.tiny
+  flavor: m1.small
   name: "rhel_instance2"
   boot_timeout: 180
-  ping_deadline: 30
-
-
-instance1: ins1
-instance2: ins2
+  ping_deadline: 90
+  keypair:
+    name: test_key
+    private: id_rsa_generated
+    public:  id_rsa_generated.pub
 
 openstack_services:
  - nova-api
@@ -71,8 +71,8 @@ openstack_services:
  - nova-compute
  - nova-network
  - nova-scheduler
- - openstack-glance-api
- - openstack-glance-registry
+ - glance-api
+ - glance-registry
 
 supplementary_services:
  - rabbitmq-server
@@ -100,6 +100,7 @@ packages_to_install:
  - rabbitmq-server
  - openstack-nova-node-full
  - MySQL-python
+ - euca2ools
 
 packages_to_clean:
  - django-file-upload
@@ -167,13 +168,24 @@ state_files:
 volume:
   source_dev:  '/dev/loop4'
   source_dev_file: '/tmp/loop4'
-  source_dev_size: 1
+  source_dev_size: 4
   group: nova-volumes
-  name1:   vol1
-  dev1:   '/dev/vdb'
-  size1: 1
+  name:   vol
+  dev:   '/dev/vdf'
+  size: 1
   zone: nova
+  timeout: 60
   attach_deadline: 60
+  dir: '/tmp/nova-volume-test'
+
+volume1:
+  name:   vol1
+  dev:   '/dev/vde'
+  size: 1
+  zone: nova
+  timeout: 60
+  attach_deadline: 60
+
 
 volume_packages:
  - scsi-target-utils

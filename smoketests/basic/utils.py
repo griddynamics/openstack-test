@@ -19,6 +19,21 @@ world.instances = {}
 world.images = {}
 world.volumes = {}
 
+timeout=60
+poll_interval=5
+
+def wait(timeout=timeout, poll_interval=poll_interval):
+    def decorate(fcn):
+        def f_retry(*args, **kwargs):
+            time_left = timeout
+            while time_left > 0:
+                if fcn(*args, **kwargs): # make attempt
+                    return True
+                time.sleep(poll_interval)
+                time_left -= poll_interval
+            return False
+        return f_retry
+    return decorate
 
 class command_output(object):
     def __init__(self, output):
@@ -209,10 +224,10 @@ class service(object):
         return bash(cmd)
 
     def start(self):
-        return self.__exec_cmd("sudo service %s start" % self.__name)
+        return self.__exec_cmd("sudo service %s start && chkconfig %s on" % (self.__name,self.__name))
 
     def stop(self):
-        return self.__exec_cmd("sudo service %s stop" % self.__name)
+        return self.__exec_cmd("sudo service %s stop && chkconfig %s off" % (self.__name,self.__name))
 
     def restart(self):
         return self.__exec_cmd("sudo service %s restart" % self.__name)
@@ -356,6 +371,11 @@ class nova_cli(object):
         return out.successful()
 
     @staticmethod
+    def remove_admin(username):
+        out = bash("sudo nova-manage user delete %s" % username)
+        return out.successful()
+
+    @staticmethod
     def user_exists(username):
         out = bash("sudo nova-manage user list")
         return out.successful() and out.output_contains_pattern(".*%s.*" % username)
@@ -363,6 +383,11 @@ class nova_cli(object):
     @staticmethod
     def create_project(project_name, username):
         out = bash("sudo nova-manage project create %s %s" % (project_name, username))
+        return out.successful()
+
+    @staticmethod
+    def remove_project(project_name):
+        out = bash("sudo nova-manage project delete %s" % project_name)
         return out.successful()
 
     @staticmethod
@@ -401,8 +426,18 @@ class nova_cli(object):
         return nova_cli.exec_novaclient_cmd('keypair-add %s %s' % (public_key_param, name))
 
     @staticmethod
+    def delete_keypair(name):
+        return nova_cli.exec_novaclient_cmd('keypair-delete %s' % name)
+
+    @staticmethod
     def keypair_exists(name):
-        return nova_cli.exec_novaclient_cmd('keypair-list | grep %s' % name)
+        text = nova_cli.get_novaclient_command_out('keypair-list')
+        if text:
+            table = ascii_table(text)
+            if table.select_values('Fingerprint','Name', name):
+                return True
+        return False
+
 
     @staticmethod
     def get_image_id_list(name):
@@ -440,6 +475,11 @@ class nova_cli(object):
                 world.instances[name] = instance_id[0]
             return ascii_table(text)
         return None
+
+
+    @staticmethod
+    def stop_vm_instance(name):
+        return nova_cli.exec_novaclient_cmd("delete %s" % world.instances[name])
 
 
     @staticmethod
@@ -484,7 +524,11 @@ class nova_cli(object):
         text = nova_cli.get_novaclient_command_out("list")
         if text:
             table = ascii_table(text)
-            return table.select_values('Status', 'ID',world.instances[name])[0]
+            try:
+                status = table.select_values('Status', 'ID',world.instances[name])[0]
+                return status
+            except:
+                return False
         return False
 
     @staticmethod
@@ -497,6 +541,7 @@ class nova_cli(object):
         return False
 
     @staticmethod
+#    @wait - TODO
     def wait_instance_comes_up(name, timeout):
         poll_interval = 5
         time_left = int(timeout)
@@ -510,12 +555,20 @@ class nova_cli(object):
                 break
         return status == 'ACTIVE'
 
+    @staticmethod
+    @wait()
+    def wait_instance_stopped(name, timeout):
+        if not nova_cli.get_instance_status(name):
+            return True
+        return False
+
 
 class euca_cli(object):
 
     @staticmethod
     def volume_create(name,size,zone='nova'):
-        out = bash("euca-create-volume --size %s --zone %s|grep VOLUME| awk '{print $2}'" % (size, zone))
+        source = nova_cli.get_novarc_load_cmd()
+        out = bash("%s && euca-create-volume --size %s --zone %s|grep VOLUME| awk '{print $2}'" % (source, size, zone))
         if out:
             euca_id = out.output_text().split()[0] 
             world.volumes[name] = misc.get_nova_id(euca_id)
@@ -524,8 +577,9 @@ class euca_cli(object):
     @staticmethod
     def get_volume_status(volume_name):
 #        world.volumes[volume_name]=23
+        source = nova_cli.get_novarc_load_cmd()
         volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
-        out = bash("euca-describe-volumes |grep %s" % volume_id).output_text()
+        out = bash("%s && euca-describe-volumes |grep %s" % (source,volume_id)).output_text()
 
         badchars=['(', ')', ',']
         for char in badchars:
@@ -541,31 +595,28 @@ class euca_cli(object):
                 ins = status['instance']
                 ins = ins.replace(']','')
                 status['instance'], status['instance-host'] = ins.split('[')
-        return status
+        if status: return status
+        else: return False
 
 
     @staticmethod
+    @wait()
     def wait_volume_comes_up(volume_name, timeout):
-        poll_interval = 5
-        time_left = int(timeout)
-        while time_left > 0:
-            status = euca_cli.get_volume_status(volume_name)['status']
-            if status != 'available':
-                time.sleep(poll_interval)
-                time_left -= poll_interval
-            else:
-                break
-        return status == 'available'
+        status = euca_cli.get_volume_status(volume_name)['status']
+        if 'available' in status:
+            return True
+        return False
 
     @staticmethod
     def volume_attach(instance_name, dev, volume_name):
+        source = nova_cli.get_novarc_load_cmd()
         volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
         instance_id='i-'+misc.get_euca_id(nova_id=world.instances[instance_name])
-        out = bash('euca-attach-volume --instance %s --device %s %s' % (instance_id, dev, volume_id))
-        time.sleep(30)
+        out = bash('%s && euca-attach-volume --instance %s --device %s %s' % (source, instance_id, dev, volume_id))
         return out.successful()
 
     @staticmethod
+    @wait()
     def volume_attached_to_instance(volume_name, instance_name):
         volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
         instance_id='i-'+misc.get_euca_id(nova_id=world.instances[instance_name])
@@ -576,30 +627,24 @@ class euca_cli(object):
 
     @staticmethod
     def volume_detach(volume_name):
+        source = nova_cli.get_novarc_load_cmd()
         volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
-        out = bash('euca-detach-volume %s' % volume_id)
+        out = bash('%s && euca-detach-volume %s' % (source,volume_id))
         time.sleep(30)
         return out.successful()
 
     @staticmethod
-    def wait_volume_deletes(volume_name, timeout):
-        poll_interval = 5
-        time_left = int(timeout)
-        while time_left > 0:
-            try:
-                status = euca_cli.get_volume_status(volume_name)['status']
-            except:
-                return True
-            if status == 'deleting':
-                time.sleep(poll_interval)
-                time_left -= poll_interval
-            else:
-                return False
+    @wait()
+    def check_volume_deleted(volume_name):
+        if not euca_cli.get_volume_status(volume_name):
+            return True
         return False
 
     @staticmethod
-    def volume_delete(name,size,zone='nova'):
-        out = bash("euca-delete-volume %s")
+    def volume_delete(volume_name):
+        source = nova_cli.get_novarc_load_cmd()
+        volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
+        out = bash("%s && euca-delete-volume %s" % (source,volume_id))
         return out.successful()
 
 

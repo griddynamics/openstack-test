@@ -175,18 +175,35 @@ def create_nova_admin(step, username):
     step_assert(step).assert_true(utils.nova_cli.create_admin(username))
 
 
+@step(u'I remove nova admin user "(.*?)"')
+def remove_nova_admin(step, username):
+    step_assert(step).assert_true(utils.nova_cli.remove_admin(username))
+
+
 @step(u'nova user "(.*?)" exists')
 def nova_user_exists(step, user):
     step_assert(step).assert_true(utils.nova_cli.user_exists(user))
+
+@step(u'nova user "(.*?)" does not exists')
+def nova_user_not_exists(step, user):
+    step_assert(step).assert_false(utils.nova_cli.user_exists(user))
 
 @step(u'I create nova project "(.*?)" for user "(.*?)"')
 def create_nova_project(step, name, user):
     step_assert(step).assert_true(utils.nova_cli.create_project(name, user))
 
 
+@step(u'I remove nova project "(.*?)"')
+def remove_nova_project(step, name):
+    step_assert(step).assert_true(utils.nova_cli.remove_project(name))
+
 @step(u'nova project "(.*?)" exists')
 def nova_project_exists(step, project):
     step_assert(step).assert_true(utils.nova_cli.project_exists(project))
+
+@step(u'nova project "(.*?)" does not exists')
+def nova_project_not_exists(step, project):
+    step_assert(step).assert_false(utils.nova_cli.project_exists(project))
 
 @step(u'nova user "(.*?)" is the manager of the nova project "(.*?)"')
 def nova_user_is_project_manager(step, user, project):
@@ -241,9 +258,17 @@ def add_keypair(step, name, file):
     key_path = os.path.join(bunch_working_dir,file)
     step_assert(step).assert_true(utils.nova_cli.add_keypair(name, key_path))
 
+@step(u'I remove keypair with name "(.*?)"')
+def delete_keypair(step, name):
+    step_assert(step).assert_true(utils.nova_cli.delete_keypair(name))
+
 @step(u'keypair with name "(.*?)" exists')
 def keypair_exists(step, name):
     step_assert(step).assert_true(utils.nova_cli.keypair_exists(name))
+
+@step(u'I see keypair "(.*?)" does not exists')
+def keypair_exists(step, name):
+    step_assert(step).assert_false(utils.nova_cli.keypair_exists(name))
 
 @step(u'I start VM instance "(.*?)" using image "(.*?)",  flavor "(.*?)" and keypair "(.*?)"')
 def start_vm_instance(step, name,image, flavor, keyname):
@@ -273,6 +298,14 @@ def start_vm_instance_save_root_pwd(step, name,image, flavor):
     step_assert(step).assert_equals(len(passwords), 1, "there should be one and only one adminPass")
     world.saved_root_password = passwords[0]
     conf.log(conf.get_bash_log_file(),"store world.saved_root_password=%s" % world.saved_root_password)
+
+@step(u'I stop VM instance "(.*?)"')
+def stop_vm_instance(step, name):
+    step_assert(step).assert_true(utils.nova_cli.stop_vm_instance(name))
+
+@step(u'VM instance "(.*?)" is stopped within "(.*?)" seconds')
+def wait_instance_stopped(step, name, timeout):
+    step_assert(step).assert_true(utils.nova_cli.wait_instance_stopped(name, int(timeout)))
 
 @step(u'I kill all processes:')
 def kill_all_processes(step):
@@ -348,6 +381,10 @@ def check_lvm_group_unavailable(step, lvm_group, source_dev):
 def create_volume(step, volume_name, volume_size, volume_zone):
     step_assert(step).assert_true(utils.euca_cli.volume_create(name=volume_name, size=volume_size, zone=volume_zone))
 
+@step(u'I remove volume "(.*?)"')
+def remove_volume(step, volume_name):
+    step_assert(step).assert_true(utils.euca_cli.volume_delete(volume_name=volume_name))
+
 @step(u'volume "(.*?)" comes up within "(.*?)" seconds')
 def check_volume_comes_up(step, volume_name, timeout):
     step_assert(step).assert_true(utils.euca_cli.wait_volume_comes_up(volume_name=volume_name, timeout=timeout))
@@ -355,6 +392,10 @@ def check_volume_comes_up(step, volume_name, timeout):
 @step(u'I see volume "(.*?)" available')
 def check_volume_available(step, volume_name):
     step_assert(step).assert_equals(utils.euca_cli.get_volume_status(volume_name=volume_name)['status'], 'available', 'Volume is not available')
+
+@step(u'I see volume "(.*?)" removed')
+def check_volume_removed(step, volume_name):
+    step_assert(step).assert_true(utils.euca_cli.check_volume_deleted(volume_name=volume_name))
 
 @step(u'I attach volume "(.*?)" to VM instance "(.*?)" as device "(.*?)"')
 def attach_volume(step, volume_name, instance_name, volume_dev):
@@ -368,3 +409,17 @@ def check_volume_attached(step, volume_name, instance_name):
 def attach_volume(step, volume_name):
     step_assert(step).assert_true(utils.euca_cli.volume_detach(volume_name=volume_name))
 
+@step(u'I login to VM "(.*?)" via SSH as "(.*?)" with key "(.*?)" and run commands:')
+def run_commands_in_instance(step, vmname, user, key):
+    ip = utils.nova_cli.get_instance_ip(vmname)
+    assert_true(ip != '', vmname)
+    key_path = os.path.join(bunch_working_dir,key)
+    for data in step.hashes:
+        if 'noFail' == data['Expected'].strip():
+            step_assert(step).assert_true(utils.ssh(ip, command=data['Command'], user=user, key=key_path).successful())
+        else:
+            step_assert(step).assert_equals(utils.ssh(ip, command=data['Command'], user=user, key=key_path).output_text().strip(),data['Expected'].strip())
+
+@step(u'Then commands are executed without errors')
+def no_errors(step):
+    pass
