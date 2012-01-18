@@ -37,10 +37,10 @@ network:
 
 image:
   path: images/ttylinux.tar.gz
-  url: http://127.0.0.1/images/rhel_image.tar.gz
-  disk: rootfs.raw
-  ram: initramfs-2.6.32-131.0.15.el6.x86_64.img
-  kernel: vmlinuz-2.6.32-131.0.15.el6.x86_64
+  url: http://127.0.0.1/images/mini_image.tar.gz
+  disk: root_fs.raw
+  ram: initramfs-3.2.1.img
+  kernel: vmlinuz-3.2.1-auto
   name: rhel_image
 
 vm:
@@ -171,7 +171,7 @@ volume:
   source_dev_size: 4
   group: nova-volumes
   name:   vol
-  dev:   '/dev/vdf'
+  dev:   '/dev/vdb'
   size: 1
   zone: nova
   timeout: 60
@@ -180,7 +180,7 @@ volume:
 
 volume1:
   name:   vol1
-  dev:   '/dev/vde'
+  dev:   '/dev/vdc'
   size: 1
   zone: nova
   timeout: 60
