@@ -1,0 +1,82 @@
+Feature: Test security groups
+    In order to smoke test security group functionality
+    As tester
+    I want to start 2 instances and check traffic between them
+
+#    Scenario: Setup prerequisites
+#        Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys"
+
+#    Scenario: Start instance
+#        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+#        And VM image "{{image.name}}" is registered
+#        And keypair with name "{{vm.keypair.name}}" exists
+#        When I start VM instance "{{vm.name}}" using image "{{image.name}}",  flavor "{{vm.flavor}}" and keypair "{{vm.keypair.name}}"
+#        Then VM instance "{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
+#        And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+#        And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol
+#        And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}"
+#        And I login to VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}" and run commands:
+#            |  Command  |   Expected  |
+#            |   whoami  |   root      |
+
+
+    Scenario: Add security group
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And I see security group "{{sg.name}}" does not exist
+        When I add security group "{{sg.name}}"
+        Then I see security group "{{sg.name}}" exist
+
+    Scenario: Add host rule
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And I see security group "{{sg.name}}" exist
+        When I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}"
+        Then I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}" exist
+
+
+
+
+
+
+
+
+
+    Scenario: Add security group
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And I see security group "{{sg2.name}}" does not exist
+        When I add security group "{{sg2.name}}"
+        Then I see security group "{{sg2.name}}" exist
+
+#    ----Test fails----
+#    Scenario: Add group rule
+#        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+#        And I see security group "{{sg.name}}" exist
+#        And I see security group "{{sg2.name}}" exist
+#        When I add rule allow from group "{{sg2.name}}", protocol "", host "" to access port "" in group "{{sg.name}}"
+#        Then I see rule allow from group "{{sg2.name}}", protocol "", host "" to access port "" in group "{{sg.name}}" exist
+
+
+
+    Scenario: Add group rule
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And I see security group "{{sg.name}}" exist
+        And I see security group "{{sg2.name}}" exist
+        When I add rule allow from group "{{sg2.name}}", protocol "udp", host "" to access port "80" in group "{{sg.name}}"
+        Then I see rule allow from group "{{sg2.name}}", protocol "udp", host "" to access port "80" in group "{{sg.name}}" exist
+
+
+
+    Scenario: Remove general rule
+        Given I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}" exist
+        When I remove rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}"
+        Then I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}" does not exist
+
+    Scenario: Remove security group
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And I see security group "{{sg.name}}" exist
+        And I see security group "{{sg2.name}}" exist
+        When I remove security group "{{sg.name}}"
+        And I remove security group "{{sg2.name}}"
+        Then I see security group "{{sg.name}}" does not exist
+        And I see security group "{{sg2.name}}" does not exist
+
+
