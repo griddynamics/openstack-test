@@ -196,3 +196,9 @@ volume_services1:
 
 volume_services2:
  - nova-volume
+
+sg:
+  name: smoketest
+
+sg2:
+  name: smoketest2

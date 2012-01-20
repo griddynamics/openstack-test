@@ -63,6 +63,7 @@ class bash(command_output):
         status, text = retcode
         conf.bash_log(cmd, status, text)
 
+#        print "------------------------------------------------------------"
 #        print "cmd: %s" % cmd
 #        print "sta: %s" % status
 #        print "out: %s" % text
@@ -564,6 +565,32 @@ class nova_cli(object):
 
 
 class euca_cli(object):
+    
+    @staticmethod
+    def _parse_rule(dst_group='', source_group_user='',source_group='', proto='', source_subnet='', port=''):
+        params=[]
+        if 'icmp' in proto: params.append(' --protocol icmp -t -1:-1')
+        elif ('all' in proto) or ('any' in proto) or (proto==''): pass
+        else: params.append(' --protocol %s' % proto)
+
+        if ('all' in port) or ('any' in port) or (port==''): pass
+        else: params.append(' --port-range %s' % port)
+
+        if ('all' in source_subnet) or ('any' in source_subnet) or (source_subnet==''): pass #params.append(' --source-subnet 0.0.0.0/0')
+        else: params.append(' --source-subnet %s' % source_subnet)
+
+        if ('all' in source_group) or ('any' in source_group) or (source_group==''): pass
+        else: params.append(' --source-group %s' % source_group)
+
+        if ('all' in source_group_user) or ('any' in source_group_user) or (source_group_user==''): pass
+        else: params.append(' --source-group-user %s' % source_group_user)
+
+        if ('all' in dst_group) or ('any' in dst_group) or (dst_group==''):
+            params.append(' default')
+        else: params.append(' %s' % dst_group)
+#        print "\n\nPARAMS:::: %s"  % params
+        return ''.join(params)
+
 
     @staticmethod
     def volume_create(name,size,zone='nova'):
@@ -576,7 +603,6 @@ class euca_cli(object):
 
     @staticmethod
     def get_volume_status(volume_name):
-#        world.volumes[volume_name]=23
         source = nova_cli.get_novarc_load_cmd()
         volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
         out = bash("%s && euca-describe-volumes |grep %s" % (source,volume_id)).output_text()
@@ -647,6 +673,61 @@ class euca_cli(object):
         out = bash("%s && euca-delete-volume %s" % (source,volume_id))
         return out.successful()
 
+    @staticmethod
+    def sgroup_add(group_name):
+        return bash('%s && euca-add-group -d smoketest-secgroup-test %s' % (nova_cli.get_novarc_load_cmd(),group_name)).successful()
+
+    @staticmethod
+    def sgroup_delete(group_name):
+        return bash('%s && euca-delete-group %s' % (nova_cli.get_novarc_load_cmd(),group_name)).successful()
+
+    @staticmethod
+    def sgroup_check(group_name):
+        out = bash("%s && euca-describe-groups %s |awk '{print $3}'" % (nova_cli.get_novarc_load_cmd(),group_name)).output_text()
+        if group_name in out:
+            return True
+        return False
+
+    @staticmethod
+    def sgroup_add_rule(dst_group='', src_group='', src_proto='', src_host='', dst_port=''):
+        params = euca_cli._parse_rule(dst_group, '', src_group, src_proto, src_host, dst_port)
+        return bash('%s && euca-authorize %s' % (nova_cli.get_novarc_load_cmd(),params)).successful()
+
+    @staticmethod
+    def sgroup_del_rule(dst_group='', src_group='', src_proto='', src_host='', dst_port=''):
+        params = euca_cli._parse_rule(dst_group, '', src_group, src_proto, src_host, dst_port)
+        return bash('%s && euca-revoke %s' % (nova_cli.get_novarc_load_cmd(),params)).successful()
+
+
+    @staticmethod
+    def sgroup_check_rule(dst_group='', src_group='', src_proto='', src_host='', dst_port=''):
+        if ('all' or 'any' or '') in dst_group: dst_group='default'
+
+        out=bash('%s && euca-describe-groups %s|grep PERMISSION' % (nova_cli.get_novarc_load_cmd(),dst_group)).output_text()
+
+        if src_host=='': src_host ='0.0.0.0/0'
+        rule = euca_cli._parse_rule(dst_group, '', src_group, src_proto, src_host, dst_port)
+
+# Try to assign to vars values as in euca-authorize output
+
+        if src_host=='': src_host ='0.0.0.0/0'
+
+        if out:
+            for line in out.split('\n'):
+                if 'FROM' in line:
+                    (gperm, gproj, ggroup, grule, gproto, gsorce_port, gdest_port, gfr, gci, ghost)=line.split()
+                    if rule == euca_cli._parse_rule(ggroup, '', '', gproto, ghost, gdest_port):
+                        return True
+
+                elif 'GRPNAME' in line:
+                    try:
+                        (gperm, gproj, ggroup, grule, gproto, gsorce_port, gdest_port, ggr, gsrc_group)=line.split()
+                        if rule == euca_cli._parse_rule(ggroup, '', gsrc_group, gproto, ghost, gdest_port):
+                            return True
+                    except:
+                        return False
+
+        return False
 
 class misc(object):
 

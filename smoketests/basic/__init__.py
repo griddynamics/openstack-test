@@ -423,3 +423,40 @@ def run_commands_in_instance(step, vmname, user, key):
 @step(u'Then commands are executed without errors')
 def no_errors(step):
     pass
+
+
+
+#####  SECURITY GROUP
+@step(u'I add security group "(.*?)"')
+def add_security_group(step, group_name):
+    step_assert(step).assert_true(utils.euca_cli.sgroup_add(group_name=group_name))
+
+@step(u'I remove security group "(.*?)"')
+def remove_security_group(step, group_name):
+    step_assert(step).assert_true(utils.euca_cli.sgroup_delete(group_name=group_name))
+
+@step(u'I see security group "(.*?)" exist')
+def check_security_group_exist(step, group_name):
+    step_assert(step).assert_true(utils.euca_cli.sgroup_check(group_name=group_name))
+
+@step(u'I see security group "(.*?)" does not exist')
+def check_security_group_not_exist(step, group_name):
+    step_assert(step).assert_false(utils.euca_cli.sgroup_check(group_name=group_name))
+
+@step(u'I add rule allow from group "(.*?)", protocol "(.*?)", host "(.*?)" to access port "(.*?)" in group "(.*?)"')
+def add_security_group_rule(step,from_group, proto, src, port, dst_group):
+    step_assert(step).assert_true(utils.euca_cli.sgroup_add_rule(dst_group=dst_group, src_group=from_group, src_proto=proto, src_host=src, dst_port=port))
+
+@step(u'I remove rule allow from group "(.*?)", protocol "(.*?)", host "(.*?)" to access port "(.*?)" in group "(.*?)"')
+def remove_security_group_rule(step,from_group, proto, src, port, dst_group):
+    step_assert(step).assert_true(utils.euca_cli.sgroup_del_rule(dst_group=dst_group, src_group=from_group, src_proto=proto, src_host=src, dst_port=port))
+
+@step(u'I see rule allow from group "(.*?)", protocol "(.*?)", host "(.*?)" to access port "(.*?)" in group "(.*?)" exist')
+def check_security_group_rule_exist(step,from_group, proto, src, port, dst_group):
+    step_assert(step).assert_true(utils.euca_cli.sgroup_check_rule(dst_group=dst_group, src_group=from_group, src_proto=proto, src_host=src, dst_port=port))
+
+@step(u'I see rule allow from group "(.*?)", protocol "(.*?)", host "(.*?)" to access port "(.*?)" in group "(.*?)" does not exist')
+def check_security_group_rule_not_exist(step,from_group, proto, src, port, dst_group):
+    step_assert(step).assert_false(utils.euca_cli.sgroup_check_rule(dst_group=dst_group, src_group=from_group, src_proto=proto, src_host=src, dst_port=port))
+
+ 
