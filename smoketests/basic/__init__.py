@@ -275,11 +275,11 @@ def vm_is_pingable(step, name, timeout):
     assert_true(ip != '', name)
     step_assert(step).assert_true(utils.networking.icmp.probe(ip, int(timeout)))
 
-@step(u'I see that "(.*?)" port of VM instance "(.*?)" is open and serves "(.*?)" protocol')
-def check_port_protocol(step, port, name, protocol):
+@step(u'I see that "(.*?)" port of VM instance "(.*?)" is open and serves "(.*?)" protocol within "(.*?)" seconds')
+def check_port_protocol(step, port, name, protocol, timeout):
     ip = utils.nova_cli.get_instance_ip(name)
     assert_true(ip != '', name)
-    step_assert(step).assert_true(utils.networking.nmap.open_port_serves_protocol(ip, port, protocol))
+    step_assert(step).assert_true(utils.networking.nmap.open_port_serves_protocol(ip, port, protocol, timeout))
 
 
 @step(u'I can log into VM "(.*?)" via SSH as "(.*?)" with key "(.*?)"')

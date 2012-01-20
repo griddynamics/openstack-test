@@ -52,6 +52,7 @@ vm:
   name: "rhel_instance1"
   boot_timeout: 60
   ping_deadline: 30
+  ssh_deadline: 60
   keypair:
     name: test_key
     private: id_rsa_generated
@@ -63,6 +64,7 @@ vm2:
   name: "rhel_instance2"
   boot_timeout: 60
   ping_deadline: 30
+  ssh_deadline: 60
 
 
 instance1: ins1

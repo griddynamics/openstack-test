@@ -619,8 +619,12 @@ class networking(object):
 
     class nmap(object):
         @staticmethod
-        def open_port_serves_protocol(host, port, proto):
-            return bash('nmap -PN -p %s --open -sV %s | grep -iE "open.*%s"' % (port, host, proto)).successful()
+        def open_port_serves_protocol(host, port, proto, timeout):
+            start_time = datetime.now()
+            while(datetime.now() - start_time).seconds < int(timeout):
+                if bash('nmap -PN -p %s --open -sV %s | ' \
+                        'grep -iE "open.*%s"' % (port, host, proto)).successful():
+                    return True
 
 
         
