@@ -11,8 +11,6 @@ compute_nodes:
  - localhost
  - *cc_ip_value
 
-
-
 nova:
   rpm_packages: openstack-nova-node-full
   conf_file: /etc/nova/nova.conf
@@ -34,6 +32,7 @@ network:
   cidr: 172.30.252.0/22
   nets: 1
   ips:  1024
+  cc: 172.30.252.1
 
 image:
   path: images/ttylinux.tar.gz
@@ -58,6 +57,17 @@ vm2:
   user: root
   flavor: m1.small
   name: "rhel_instance2"
+  boot_timeout: 180
+  ping_deadline: 90
+  keypair:
+    name: test_key
+    private: id_rsa_generated
+    public:  id_rsa_generated.pub
+
+vm3:
+  user: root
+  flavor: m1.small
+  name: "rhel_instance3"
   boot_timeout: 180
   ping_deadline: 90
   keypair:
@@ -202,3 +212,6 @@ sg:
 
 sg2:
   name: smoketest2
+
+sg3:
+  name: smoketest3

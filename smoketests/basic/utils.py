@@ -453,9 +453,10 @@ class nova_cli(object):
 
 
     @staticmethod
-    def start_vm_instance(name, image_id, flavor_id, key_name=None):
+    def start_vm_instance(name, image_id, flavor_id, key_name=None, sec_groups=None):
         key_name_arg = "" if key_name is None else "--key_name %s" % key_name
-        text = nova_cli.get_novaclient_command_out("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
+        sgroup_arg = "" if sec_groups is None else "--security_groups %s" % sec_groups
+        text = nova_cli.get_novaclient_command_out("boot %s --image %s --flavor %s %s %s" % (name, image_id, flavor_id, key_name_arg, sgroup_arg))
         if text:
             table = ascii_table(text)
             instance_id = table.select_values('Value', 'Property', 'id')
@@ -567,29 +568,54 @@ class nova_cli(object):
 class euca_cli(object):
     
     @staticmethod
-    def _parse_rule(dst_group='', source_group_user='',source_group='', proto='', source_subnet='', port=''):
-        params=[]
-        if 'icmp' in proto: params.append(' --protocol icmp -t -1:-1')
-        elif ('all' in proto) or ('any' in proto) or (proto==''): pass
-        else: params.append(' --protocol %s' % proto)
+    def _parse_rule(dst_group=None, source_group_user=None,source_group=None, proto=None, source_subnet=None, port=None):
+        params={}
+        if dst_group: dst_group=str(dst_group)
+        if source_group_user: source_group_user=str(source_group_user)
+        if source_group: source_group=str(source_group)
 
-        if ('all' in port) or ('any' in port) or (port==''): pass
-        else: params.append(' --port-range %s' % port)
+        if port:
+            try:
+                if not port=='-1--1':
+                    from_port, to_port = port.split('-')
+            except:
+                port=port+"-"+port
 
-        if ('all' in source_subnet) or ('any' in source_subnet) or (source_subnet==''): pass #params.append(' --source-subnet 0.0.0.0/0')
-        else: params.append(' --source-subnet %s' % source_subnet)
 
-        if ('all' in source_group) or ('any' in source_group) or (source_group==''): pass
-        else: params.append(' --source-group %s' % source_group)
+        if proto:
+            proto=str(proto)
+            if proto.upper() in ('ICMP',):
+                if port in ('-1', '-1:-1','-1--1', '', None):
+                    params['protocol']="icmp"
+                    params['icmp-type-code']="-1:-1"
+                else:
+                    params['protocol']='icmp'
+                    params['icmp-type-code']=port
+            if proto.upper() in ('TCP', 'UDP'):
+                params['protocol']=proto
+                params['port-range']=port
 
-        if ('all' in source_group_user) or ('any' in source_group_user) or (source_group_user==''): pass
-        else: params.append(' --source-group-user %s' % source_group_user)
+        if source_subnet:
+            if source_subnet in (''):
+                params['source-subnet']='0.0.0.0/0'
 
-        if ('all' in dst_group) or ('any' in dst_group) or (dst_group==''):
-            params.append(' default')
-        else: params.append(' %s' % dst_group)
-#        print "\n\nPARAMS:::: %s"  % params
-        return ''.join(params)
+        if source_group:
+            params['source-group']=source_group
+
+        if source_group_user:
+            params['source-group-user']=source_group_user
+
+        cmdline=[]
+        for param,val in sorted(params.iteritems()):
+            cmdline.append(' --'+param+' '+val)
+
+        if dst_group:
+            cmdline.append(' '+dst_group)
+        else:
+            cmdline.append(' default')
+
+#        print "\nPARSE-PARAMS: %s"  % cmdline
+        return ''.join(cmdline)
 
 
     @staticmethod
@@ -700,34 +726,46 @@ class euca_cli(object):
 
 
     @staticmethod
-    def sgroup_check_rule(dst_group='', src_group='', src_proto='', src_host='', dst_port=''):
-        if ('all' or 'any' or '') in dst_group: dst_group='default'
-
+    def sgroup_check_rule_exist(dst_group='', src_group='', src_proto='', src_host='', dst_port=''):
         out=bash('%s && euca-describe-groups %s|grep PERMISSION' % (nova_cli.get_novarc_load_cmd(),dst_group)).output_text()
-
-        if src_host=='': src_host ='0.0.0.0/0'
         rule = euca_cli._parse_rule(dst_group, '', src_group, src_proto, src_host, dst_port)
+        print "Searching: "+rule
 
-# Try to assign to vars values as in euca-authorize output
-
-        if src_host=='': src_host ='0.0.0.0/0'
-
+        # Try to assign to vars values as in euca-authorize output
         if out:
             for line in out.split('\n'):
+#                print "Got line: "+line
                 if 'FROM' in line:
-                    (gperm, gproj, ggroup, grule, gproto, gsorce_port, gdest_port, gfr, gci, ghost)=line.split()
-                    if rule == euca_cli._parse_rule(ggroup, '', '', gproto, ghost, gdest_port):
+                    (gperm, gproj, ggroup, grule, gproto, gport_from, gport_to, gfr, gci, ghost)=line.split()
+                    print "FR-OUT-line: "+euca_cli._parse_rule(ggroup, '', '', gproto, ghost, gport_from+"-"+gport_to)
+                    if rule == euca_cli._parse_rule(ggroup, '', '', gproto, ghost, gport_from+"-"+gport_to):
                         return True
 
                 elif 'GRPNAME' in line:
                     try:
-                        (gperm, gproj, ggroup, grule, gproto, gsorce_port, gdest_port, ggr, gsrc_group)=line.split()
-                        if rule == euca_cli._parse_rule(ggroup, '', gsrc_group, gproto, ghost, gdest_port):
+                        (gperm, gproj, ggroup, grule, gproto, gport_from, gport_to, ggr, gsrc_group)=line.split()
+                        print "GR-OUT-line: "+euca_cli._parse_rule(ggroup, '', gsrc_group, gproto, '', gport_from+"-"+gport_to)
+                        if rule == euca_cli._parse_rule(ggroup, '', gsrc_group, gproto, '', gport_from+"-"+gport_to):
                             return True
                     except:
                         return False
-
         return False
+
+    @staticmethod
+    def sgroup_check_rule(dst_group='', src_group='', src_proto='', src_host='', dst_port=''):
+        # Workaround for group rule
+        #PERMISSION      project1        smoketest3      ALLOWS  icmp    -1      -1      USER    project1
+        #PERMISSION      project1        smoketest3      ALLOWS  tcp     1       65535   USER    project1
+        #PERMISSION      project1        smoketest3      ALLOWS  udp     1       65536   USER    project1
+
+        if src_group and (src_proto=='' and src_host=='' and dst_port==''):
+            if euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto='tcp', src_host='', dst_port='1-65535') and\
+            euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto='udp', src_host='', dst_port='1-65536') and \
+            euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto='icmp', src_host='', dst_port='-1'):
+                return True
+        return euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto, src_host, dst_port)
+
+
 
 class misc(object):
 
