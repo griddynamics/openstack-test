@@ -94,15 +94,9 @@ gpgcheck=1
 """.format(repo_id=repo)
         else:
             repo_config = """
-[os-master-repo]
-name=Grid Dynamics OpenStack RHEL
-baseurl=http://osc-build.vm.griddynamics.net/{repo_id}
-enabled=1
-gpgcheck=1
-
 [{repo_id}]
 name=Grid Dynamics OpenStack RHEL
-baseurl=http://osc-build.vm.griddynamics.net/{env}/{repo_id}
+baseurl=http://osc-build.vm.griddynamics.net/unstable/{env}/{repo_id}
 enabled=1
 gpgcheck=1
 
