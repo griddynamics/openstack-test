@@ -1,0 +1,62 @@
+Feature: Allocate external IP and associate with instance,
+    In order to test floating IP feature
+    As tester
+    I want to associate external IP with instance
+
+
+    Scenario: Allocate external IP
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And I see pool of external IP addresses "{{network.external.cidr}}" exist
+        When I allocate address "{{floating.name}}"
+        Then I see address "{{floating.name}}" allocated
+
+
+    Scenario: Start instance
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And VM image "{{image.name}}" is registered
+        And keypair with name "{{vm.keypair.name}}" exists
+        When I start VM instance "{{vm.name}}" using image "{{image.name}}",  flavor "{{vm.flavor}}" and keypair "{{vm.keypair.name}}"
+        Then VM instance "{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
+        And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol
+        And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}"
+        And I login to VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}" and run commands:
+            |  Command  |   Expected  |
+            |   whoami  |   root      |
+
+    Scenario: Associate allocated IP with started instance
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        When I associate address "{{floating.name}}" with instance "{{vm.name}}"
+        Then I see address "{{floating.name}}" associated with instance "{{vm.name}}"
+
+    Scenario: Check floating IP
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        When i run commands:
+            |  Command                                                         | Expected  |
+            |  iptables -I OUTPUT -j ACCEPT                                    | noFail    |
+        Then address "{{floating.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+
+
+#            |  ping -c1 "{{floating.name}}" \|grep received \|awk '{print $4}' |    1      |
+
+
+
+
+## CLEAN AFTER TEST ----------------------
+
+    Scenario: De-associate IP from instance
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And I see address "{{floating.name}}" associated with instance "{{vm.name}}"
+        When I de-associate address "{{floating.name}}" from instance "{{vm.name}}"
+        Then I see address "{{floating.name}}" not associated with instance "{{vm.name}}"
+        And I see address "{{floating.name}}" allocated
+
+
+    Scenario: De-Allocate external IP
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And I see address "{{floating.name}}" allocated
+        When I de-allocate address "{{floating.name}}"
+        Then I see address "{{floating.name}}" not allocated
+
+
