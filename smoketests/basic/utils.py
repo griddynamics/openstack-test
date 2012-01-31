@@ -12,12 +12,14 @@ from nose.tools import assert_equals, assert_true, assert_false
 from pprint import pformat
 import conf
 from lettuce import world
+from IPy import IP
 
 # Make Bash an object
 
 world.instances = {}
 world.images = {}
 world.volumes = {}
+world.floating = {}
 
 timeout=60
 poll_interval=5
@@ -338,6 +340,39 @@ class novarc(dict):
     def source(self):
         return "source %s" % self.file
 
+
+        ##===============##
+        ##  NOVA MANAGE  ##
+        ##===============##
+
+class nova_manage(object):
+    @staticmethod
+    def floating_add_pool(cidr):
+        return bash('sudo nova-manage floating create %s' % cidr)
+
+    @staticmethod
+    def floating_remove_pool(cidr):
+        return bash('sudo nova-manage floating delete %s' % cidr)
+
+    @staticmethod
+    def floating_check_pool(cidr):
+        out = bash('sudo nova-manage floating list').output_text()
+        ips=IP(cidr)
+
+        for addr in ips:
+            ip=IP(addr).strNormal()
+            for line in out.split('\n'):
+                if ip in line.split()[1]:
+                    return True
+        return False
+
+
+
+        ##============##
+        ##  NOVA CLI  ##
+        ##============##
+
+
 class nova_cli(object):
 
     __novarc = None
@@ -539,6 +574,7 @@ class nova_cli(object):
         if text:
             table = ascii_table(text)
             (status,ip) = table.select_values('Networks', 'ID',world.instances[name])[0].split('=')
+            ip = ip.split(',')[0]
             return ip
         return False
 
@@ -563,6 +599,61 @@ class nova_cli(object):
         if not nova_cli.get_instance_status(name):
             return True
         return False
+
+
+
+    @staticmethod
+    def floating_allocate(name):
+        text = nova_cli.get_novaclient_command_out('floating-ip-create %s' % name)
+        if text:
+            table = ascii_table(text)
+            world.floating[name] = table.select_values('Ip','Instance', 'None')[0]
+            if world.floating[name]:return True
+        return False
+
+    @staticmethod
+    def floating_deallocate(name):
+        return nova_cli.exec_novaclient_cmd('floating-ip-delete %s' % world.floating[name])
+
+    @staticmethod
+    def floating_check_allocated(name):
+        if not world.floating[name]: world.floating[name]=None
+        text = nova_cli.get_novaclient_command_out('floating-ip-list')
+        if text:
+            table = ascii_table(text)
+            try:
+                value = table.select_values('Instance', 'Ip',  world.floating[name])[0]
+                if value in ('None',):
+                    return True
+            except:
+                return False
+        return False
+
+
+    @staticmethod
+    def floating_associate(addr_name, ins_name):
+        return nova_cli.exec_novaclient_cmd('add-floating-ip %s %s' % (world.instances[ins_name],world.floating[addr_name]))
+
+    @staticmethod
+    def floating_deassociate(addr_name, ins_name):
+        return nova_cli.exec_novaclient_cmd('remove-floating-ip %s %s' % (world.instances[ins_name],world.floating[addr_name]))
+
+    @staticmethod
+    def floating_check_associated(addr_name, ins_name):
+        if not world.floating[addr_name]: world.floating[addr_name]=None
+        text = nova_cli.get_novaclient_command_out('floating-ip-list')
+
+        if text:
+            table = ascii_table(text)
+            if table.select_values('Instance', 'Ip', world.floating[addr_name])[0]==world.instances[ins_name]:
+                return True
+        return False
+
+
+
+        ##============##
+        ##  EUCA CLI  ##
+        ##============##
 
 
 class euca_cli(object):
@@ -766,7 +857,6 @@ class euca_cli(object):
         return euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto, src_host, dst_port)
 
 
-
 class misc(object):
 
     @staticmethod
@@ -872,17 +962,20 @@ class ascii_table(object):
             if '|' in line:
                 row =  map(string.strip, line.strip('|').split('|'))
                 if column_titles is None:
-                    column_titles = row
+                    column_titles = [rw.split()[0] for rw in row]
                 else:
                     rows.append(row)
-
+#        print "rows:"
+#        print rows
+#        print "tit:"
+#        print column_titles
         Row = namedtuple('Row', column_titles)
         rows = map(Row._make, rows)
         return column_titles, rows
 
     def select_values(self, from_column, where_column, items_equal_to):
-        from_column_number = self.titles.index(from_column)
-        where_column_name_number = self.titles.index(where_column)
+        from_column_number = self.titles.index(from_column.split()[0])
+        where_column_name_number = self.titles.index(where_column.split()[0])
         return [item[from_column_number] for item in self.rows if item[where_column_name_number] == items_equal_to]
 
 class expect_spawn(pexpect.spawn):

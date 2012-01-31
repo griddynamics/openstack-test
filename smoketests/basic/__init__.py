@@ -335,6 +335,12 @@ def vm_is_pingable(step, name, timeout):
     assert_true(ip != '', name)
     step_assert(step).assert_true(utils.networking.icmp.probe(ip, int(timeout)))
 
+@step(u'address "(.*?)" is pingable within "(.*?)" seconds')
+def address_is_pingable(step, name, timeout):
+    ip = world.floating[name]
+    assert_true(ip != '', name)
+    step_assert(step).assert_true(utils.networking.icmp.probe(ip, int(timeout)))
+
 @step(u'I see that "(.*?)" port of VM instance "(.*?)" is open and serves "(.*?)" protocol')
 def check_port_protocol(step, port, name, protocol):
     ip = utils.nova_cli.get_instance_ip(name)
@@ -433,6 +439,15 @@ def run_commands_in_instance(step, vmname, user, key):
         else:
             step_assert(step).assert_equals(utils.ssh(ip, command=data['Command'], user=user, key=key_path).output_text().strip(),data['Expected'].strip())
 
+@step(u'I run commands:')
+def run_commands(step):
+    for data in step.hashes:
+        if 'noFail' == data['Expected'].strip():
+            step_assert(step).assert_true(utils.bash(data['Command']).successful())
+        else:
+            step_assert(step).assert_equals(utils.bash(data['Command']).output_text().strip(),data['Expected'].strip())
+
+
 @step(u'Then commands are executed without errors')
 def no_errors(step):
     pass
@@ -472,4 +487,53 @@ def check_security_group_rule_exist(step,from_group, proto, src, port, dst_group
 def check_security_group_rule_not_exist(step,from_group, proto, src, port, dst_group):
     step_assert(step).assert_false(utils.euca_cli.sgroup_check_rule(dst_group=dst_group, src_group=from_group, src_proto=proto, src_host=src, dst_port=port))
 
- 
+
+#####  FLOATING IP
+@step(u'I add pool of external IP addresses "(.*?)"')
+def add_floating_pool(step, cidr):
+    step_assert(step).assert_true(utils.nova_manage.floating_add_pool(cidr))
+
+@step(u'I remove pool of external IP addresses "(.*?)"')
+def remove_floating_pool(step, cidr):
+    step_assert(step).assert_true(utils.nova_manage.floating_remove_pool(cidr))
+
+@step(u'I see pool of external IP addresses "(.*?)" exist')
+def check_floating_pool_exist(step, cidr):
+    step_assert(step).assert_true(utils.nova_manage.floating_check_pool(cidr))
+
+@step(u'I see pool of external IP addresses "(.*?)" does not exist')
+def check_floating_pool_not_exist(step, cidr):
+    step_assert(step).assert_false(utils.nova_manage.floating_check_pool(cidr))
+
+
+@step(u'I allocate address "(.*?)"')
+def allocate_floating_address(step, name):
+    step_assert(step).assert_true(utils.nova_cli.floating_allocate(name))
+
+@step(u'I de-allocate address "(.*?)"')
+def deallocate_floating_address(step, name):
+    step_assert(step).assert_true(utils.nova_cli.floating_deallocate(name))
+
+@step(u'I see address "(.*?)" allocated')
+def floating_check_address_allocated(step, name):
+    step_assert(step).assert_true(utils.nova_cli.floating_check_allocated(name))
+
+@step(u'I see address "(.*?)" not allocated')
+def floating_check_address_not_allocated(step, name):
+    step_assert(step).assert_false(utils.nova_cli.floating_check_allocated(name))
+
+@step(u'I associate address "(.*?)" with instance "(.*?)"')
+def associate_floating_address(step, address,instance):
+    step_assert(step).assert_true(utils.nova_cli.floating_associate(address, instance))
+
+@step(u'I de-associate address "(.*?)" from instance "(.*?)"')
+def deassociate_floating_address(step, address,instance):
+    step_assert(step).assert_true(utils.nova_cli.floating_deassociate(address, instance))
+
+@step(u'I see address "(.*?)" associated with instance "(.*?)"')
+def check_address_associated(step, address,instance):
+    step_assert(step).assert_true(utils.nova_cli.floating_check_associated(address, instance))
+
+@step(u'I see address "(.*?)" not associated with instance "(.*?)"')
+def check_address_associated(step, address,instance):
+    step_assert(step).assert_false(utils.nova_cli.floating_check_associated(address, instance))
