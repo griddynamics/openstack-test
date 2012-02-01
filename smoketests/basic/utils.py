@@ -687,8 +687,10 @@ class euca_cli(object):
                 params['port-range']=port
 
         if source_subnet:
-            if source_subnet in (''):
+            if source_subnet in ('', None):
                 params['source-subnet']='0.0.0.0/0'
+            else:
+                params['source-subnet']=source_subnet
 
         if source_group:
             params['source-group']=source_group
@@ -820,7 +822,7 @@ class euca_cli(object):
     def sgroup_check_rule_exist(dst_group='', src_group='', src_proto='', src_host='', dst_port=''):
         out=bash('%s && euca-describe-groups %s|grep PERMISSION' % (nova_cli.get_novarc_load_cmd(),dst_group)).output_text()
         rule = euca_cli._parse_rule(dst_group, '', src_group, src_proto, src_host, dst_port)
-        print "Searching: "+rule
+#        print "Searching: "+rule
 
         # Try to assign to vars values as in euca-authorize output
         if out:
@@ -828,14 +830,14 @@ class euca_cli(object):
 #                print "Got line: "+line
                 if 'FROM' in line:
                     (gperm, gproj, ggroup, grule, gproto, gport_from, gport_to, gfr, gci, ghost)=line.split()
-                    print "FR-OUT-line: "+euca_cli._parse_rule(ggroup, '', '', gproto, ghost, gport_from+"-"+gport_to)
+#                    print "FR-OUT-line: "+euca_cli._parse_rule(ggroup, '', '', gproto, ghost, gport_from+"-"+gport_to)
                     if rule == euca_cli._parse_rule(ggroup, '', '', gproto, ghost, gport_from+"-"+gport_to):
                         return True
 
                 elif 'GRPNAME' in line:
                     try:
                         (gperm, gproj, ggroup, grule, gproto, gport_from, gport_to, ggr, gsrc_group)=line.split()
-                        print "GR-OUT-line: "+euca_cli._parse_rule(ggroup, '', gsrc_group, gproto, '', gport_from+"-"+gport_to)
+#                        print "GR-OUT-line: "+euca_cli._parse_rule(ggroup, '', gsrc_group, gproto, '', gport_from+"-"+gport_to)
                         if rule == euca_cli._parse_rule(ggroup, '', gsrc_group, gproto, '', gport_from+"-"+gport_to):
                             return True
                     except:

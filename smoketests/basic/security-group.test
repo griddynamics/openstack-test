@@ -34,10 +34,26 @@ Feature: Test security groups
         And I see security group "{{sg.name}}" exist
         And I see security group "{{sg2.name}}" exist
         And I see security group "{{sg3.name}}" exist
+
         When I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group ""
+        And I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}"
+        And I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg2.name}}"
+        And I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg3.name}}"
+
         And I add rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group ""
+        And I add rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg.name}}"
+        And I add rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg2.name}}"
+        And I add rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg3.name}}"
+
         Then I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "" exist
+        And I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}" exist
+        And I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg2.name}}" exist
+        And I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg3.name}}" exist
+
         And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "" exist
+        And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg.name}}" exist
+        And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg2.name}}" exist
+        And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg3.name}}" exist
 
 
     Scenario: Start instance
@@ -92,29 +108,25 @@ Feature: Test security groups
         When I add rule allow from group "{{sg2.name}}", protocol "", host "" to access port "" in group "{{sg3.name}}"
         Then I see rule allow from group "{{sg2.name}}", protocol "", host "" to access port "" in group "{{sg3.name}}" exist
 
-    Scenario: Login to 2nd instance and check traffic can pass to 3rd instance
+    Scenario: Login to 2nd instance and check traffic can pass to 3rd instance and cannot pass to 1st
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And I can log into VM "{{vm2.name}}" via SSH as "{{vm2.user}}" with key "{{vm2.keypair.private}}"
         When I login to VM "{{vm2.name}}" via SSH as "{{vm2.user}}" with key "{{vm2.keypair.private}}" and run commands:
             |  Command                |   Expected  |
-            |   ping "{{vm3.name}}"   |   ping ok      |
+            |   ping -c3 "{{vm3.name}}" \| grep received \|awk '{print $4}'   |   3      |
+
+        And I login to VM "{{vm2.name}}" via SSH as "{{vm2.user}}" with key "{{vm2.keypair.private}}" and run commands:
+            |  Command                |   Expected  |
+            |   ping -c3 "{{vm.name}}" \| grep received \|awk '{print $4}'   |   0      |
+
 
 
     Scenario: Login to 3rd instance and check traffic can pass to 2nd instance
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        And I can log into VM "{{vm2.name}}" via SSH as "{{vm2.user}}" with key "{{vm2.keypair.private}}"
-        When I login to VM "{{vm2.name}}" via SSH as "{{vm2.user}}" with key "{{vm2.keypair.private}}" and run commands:
+        And I can log into VM "{{vm3.name}}" via SSH as "{{vm3.user}}" with key "{{vm3.keypair.private}}"
+        When I login to VM "{{vm3.name}}" via SSH as "{{vm3.user}}" with key "{{vm3.keypair.private}}" and run commands:
             |  Command                |   Expected  |
-            |   ping "{{vm2.name}}"   |   ping ok      |
-
-
-    Scenario: Login to 2nd instance and check traffic can not pass to 1st instance
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        And I can log into VM "{{vm2.name}}" via SSH as "{{vm2.user}}" with key "{{vm2.keypair.private}}"
-        When I login to VM "{{vm2.name}}" via SSH as "{{vm2.user}}" with key "{{vm2.keypair.private}}" and run commands:
-            |  Command                |   Expected  |
-            |   ping "{{vm.name}}"   |   ping fail      |
-
+            |   ping -c3 "{{vm2.name}}" \| grep received \|awk '{print $4}'   |   3      |
 
 
     Scenario: Remove rule to allow all traffic from SG2 pass to SG3

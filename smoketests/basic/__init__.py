@@ -448,7 +448,7 @@ def run_commands(step):
             step_assert(step).assert_equals(utils.bash(data['Command']).output_text().strip(),data['Expected'].strip())
 
 
-@step(u'Then commands are executed without errors')
+@step(u'commands are executed without errors')
 def no_errors(step):
     pass
 

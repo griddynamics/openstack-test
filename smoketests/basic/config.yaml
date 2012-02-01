@@ -47,7 +47,7 @@ image:
 vm:
   user: root
   flavor: m1.small
-  name: "rhel_instance1"
+  name: "rhelinstance1"
   boot_timeout: 180
   ping_deadline: 90
   keypair:
@@ -58,7 +58,7 @@ vm:
 vm2:
   user: root
   flavor: m1.small
-  name: "rhel_instance2"
+  name: "rhelinstance2"
   boot_timeout: 180
   ping_deadline: 90
   keypair:
@@ -69,7 +69,7 @@ vm2:
 vm3:
   user: root
   flavor: m1.small
-  name: "rhel_instance3"
+  name: "rhelinstance3"
   boot_timeout: 180
   ping_deadline: 90
   keypair:

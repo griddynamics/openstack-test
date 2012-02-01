@@ -32,7 +32,7 @@ Feature: Allocate external IP and associate with instance,
     Scenario: Check floating IP
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-        When i run commands:
+        When I run commands:
             |  Command                                                         | Expected  |
             |  iptables -I OUTPUT -j ACCEPT                                    | noFail    |
         Then address "{{floating.name}}" is pingable within "{{vm.ping_deadline}}" seconds
@@ -61,3 +61,11 @@ Feature: Allocate external IP and associate with instance,
         Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
         When I stop VM instance "{{vm.name}}"
         Then VM instance "{{vm.name}}" is stopped within "{{vm.boot_timeout}}" seconds
+
+    Scenario: Undo system changes
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        When I run commands:
+            |  Command                                                         | Expected  |
+            |  iptables -D OUTPUT -j ACCEPT                                    | noFail    |
+        Then commands are executed without errors
+
