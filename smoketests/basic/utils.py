@@ -24,6 +24,27 @@ world.floating = {}
 timeout=60
 poll_interval=5
 
+
+DEFAULT_FIXTURE = [
+      ('role', 'add', 'Admin'),
+      ('role', 'add', 'KeystoneServiceAdmin'),
+      ('role', 'add', 'Member'),
+      #  Services
+      ('service', 'add', 'swift', 'object-store', 'Swift-compatible service'),
+      ('service', 'add', 'nova',  'compute', 'OpenStack Compute Service'),
+      ('service', 'add', 'nova_billing', 'nova_billing', 'Billing for OpenStack'),
+      ('service', 'add', 'glance', 'image', 'OpenStack Image Service'),
+      ('service', 'add', 'identity', 'identity', 'OpenStack Identity Service'),
+]
+
+ENDPOINT_TEMPLATES = {
+      "swift": ('http://%host%:8080/v1', 'http://%host%:8080/v1', 'http://%host%:8080/v1', '1', '0'),
+      "nova": ('http://%host%:8774/v1.1/%tenant_id%', 'http://%host%:8774/v1.1/%tenant_id%', 'http://%host%:8774/v1.1/%tenant_id%', '1', '0'),
+      "glance": ('http://%host%:9292/v1', 'http://%host%:9292/v1', 'http://%host%:9292/v1', '1', '0'),
+      "nova_billing": ('http://%host%:8787', 'http://%host%:8787', 'http://%host%:8787', '1', '1'),
+      "identity": ('http://%host%:5000/v2.0', 'http://%host%:35357/v2.0', 'http://%host%:5000/v2.0', '1', '1'),
+}
+
 def wait(timeout=timeout, poll_interval=poll_interval):
     def decorate(fcn):
         def f_retry(*args, **kwargs):
@@ -81,25 +102,37 @@ class rpm(object):
         return out.successful()
 
     @staticmethod
-    def install(package):
-        out = bash("sudo yum -y install '%s'" % package)
-        return out.successful() and out.output_contains_pattern("(Installed:[\s\S]*%s.*)|(Package.*%s.* already installed)" % (package, package))
+    def install(package_list):
+        out = bash("sudo yum -y install %s" % " ".join(package_list))
+        return out.successful()
+
+    @staticmethod
+    def installed(package_list):
+        out = bash("rpmquery %s" % " ".join(package_list))
+        return out.successful() and not out.output_contains_pattern('not installed')
+
+    @staticmethod
+    def available(package_list):
+        out = bash("sudo yum list")
+        if not out.successful():
+            return False
+        lines = out.output_text().split("\n")
+        for package in package_list:
+            found = False
+            for line in lines:
+                if line.startswith("%s." % package):
+                    found = True
+                    break
+            if not found:
+                return False
+
+        return True
         
     @staticmethod
     def remove(package):
         out = bash("sudo yum -y erase '%s'" % package)
         wildcards_stripped_pkg_name = package.strip('*')
         return out.output_contains_pattern("(No Match for argument)|(Removed:[\s\S]*%s.*)|(Package.*%s.*not installed)" % (wildcards_stripped_pkg_name , wildcards_stripped_pkg_name))
-
-    @staticmethod
-    def installed(package):
-        out = bash("rpmquery %s" % package)
-        return not out.output_contains_pattern('not installed')
-
-    @staticmethod
-    def available(package):
-        out = bash("sudo yum list | grep '^%s\.'" % package)
-        return out.successful() and out.output_nonempty()
 
     @staticmethod
     def yum_repo_exists(id):
@@ -340,6 +373,203 @@ class novarc(dict):
     def source(self):
         return "source %s" % self.file
 
+    def bash(self, cmd):
+        return bash('source %s && %s' % (self.file, cmd))
+
+    @staticmethod
+    def from_zipfile(project, user, destination):
+        path = os.path.join(destination, 'novarc.zip')
+        out = bash('sudo nova-manage project zipfile %s %s %s' % (project, user, path))
+        if out.successful():
+            out = bash("unzip -uo %s -d %s" % (path,destination))
+            new_novarc = novarc()
+            if out.successful() and new_novarc.load(os.path.join(destination, 'novarc')):
+                return new_novarc
+        return None
+
+    @staticmethod
+    def from_template(project, user, password, destination):
+        new_novarc = novarc()
+        path = os.path.join(destination, "novarc.template")
+
+        novarc_template = open(path, "rt").read()
+        novarc_text = novarc_template % {
+            "auth_url": "http://127.0.0.1:5000/v2.0",
+            "username": user,
+            "tenant_name": project,
+            "password": password}
+        novarc_path = os.path.join(destination, 'novarc')
+        open(novarc_path, "wt").write(novarc_text)
+        if new_novarc.load(novarc_path):
+            return new_novarc
+        return None
+
+    @staticmethod
+    def create(project, user, password, destination):
+        if os.path.exists("/etc/keystone"):
+            return novarc.from_template(project, user, password, destination)
+        else:
+            return novarc.from_zipfile(project, user, destination)
+
+
+        ##===================##
+        ##  KEYSTONE MANAGE  ##
+        ##===================##
+
+class keystone(object):
+
+
+    @staticmethod
+    def init_db(host, user, password, project):
+        this_dir = os.path.dirname(os.path.abspath(__file__))
+        bash("rm -f /var/lib/keystone/keystone.db")
+        out = bash("sudo -u keystone keystone-init-db"
+                   " --host=%s --user=%s --password=%s"
+                   " --tenant=%s --token=999888777666"
+                   % (host, user, password, project))
+        return out.successful()
+
+    @staticmethod
+    def setup_middleware():
+        out = bash("keystone-setup-middleware")
+        return out.successful()
+
+
+## ^^^^^^^^   REMOVE   ^^^^^^^^^
+
+class keystone_manage(object):
+    @staticmethod
+    def init_default(host='127.0.0.1', user='admin', password='secrete',tenant='systenant', token='111222333444', region='regionOne'):
+        for cmd in DEFAULT_FIXTURE:
+            bash("sudo keystone-manage %s" % ' '.join(cmd))
+
+        keystone_manage.create_tenant(tenant)
+
+        i=int(1)
+        for service in ENDPOINT_TEMPLATES:
+            keystone_manage.add_template(
+                region, service,
+                *[word.replace("%host%", host)
+                  for word in ENDPOINT_TEMPLATES[service]])
+    # FIX IT
+            keystone_manage.add_endpoint(tenant,i)
+            i=i+1
+
+#        keystone_manage.create_user(user,password,tenant)
+#        keystone_manage.grant_role('Admin',user)
+#        keystone_manage.add_token(user, tenant, token)
+        return True
+
+
+    @staticmethod
+    def init_keystone(host, user, password, tenant):
+        create_tenant(tenant)
+        create_user(user, password, tenant)
+        add_role('Admin')
+        grant_role('Admin', user)
+#        for template in endpointTemplates:
+#            add_template(region='', service='', publicURL='', adminURL='', internalURL='', enabled='1', global='1')
+        
+        add_token(user,tenant, token)
+#        for endpoint in endpoints:
+#            add_endpoint(tenant, template):
+
+
+    @staticmethod
+    def create_tenant(name):
+        out = bash("sudo keystone-manage tenant add %s" % name)
+        return out.successful()
+
+    @staticmethod
+    def delete_tenant(name):
+        out = bash("sudo keystone-manage tenant delete %s" % name)
+        return out.successful()
+
+    @staticmethod
+    def create_user(name,password,tenant=''):
+        out = bash("sudo keystone-manage user add %s %s %s" % (name,password,tenant))
+        return out.successful()
+
+
+# __ TODO __
+    @staticmethod
+    def check_user_exist(name):
+        #out = bash("sudo keystone-manage user list").output_text
+        return True
+
+
+
+    @staticmethod
+    def delete_user(name):
+        out = bash("sudo keystone-manage user delete %s" % name)
+        return out.successful()
+
+    @staticmethod
+    def add_role(name):
+        out = bash("sudo keystone-manage role add %s" % name)
+        return out.successful()
+
+    @staticmethod
+    def delete_role(name):
+        out = bash("sudo keystone-manage role delete %s" % name)
+        return out.successful()
+
+    @staticmethod
+    def grant_role(role, user):
+        out = bash("sudo keystone-manage role grant %s %s" % (role,user))
+        return out.successful()
+
+#__ TODO __
+    @staticmethod
+    def check_role_granted(role, user):
+        #out = bash("sudo keystone-manage role grant %s %s" % (role,user))
+        return True
+
+    @staticmethod
+    def revoke_role(role, user):
+        out = bash("sudo keystone-manage role revoke %s %s" % (role,user))
+        return out.successful()
+
+    @staticmethod
+    def add_template(region='', service='', publicURL='', adminURL='', internalURL='', enabled='1', isglobal='1'):
+        out = bash("sudo keystone-manage endpointTemplates add %s %s %s %s %s %s %s" % (region, service, publicURL, adminURL, internalURL, enabled, isglobal))
+        return out.successful()
+
+    @staticmethod
+    def delete_template(region='', service='', publicURL='', adminURL='', internalURL='', enabled='1', isglobal='1'):
+        out = bash("sudo keystone-manage endpointTemplates delete %s %s %s %s %s %s %s" % (region, service, publicURL, adminURL, internalURL, enabled, isglobal))
+        return out.successful()
+
+    @staticmethod
+    def add_token(user, tenant, token='111222333444', expiration='2015-02-05T00:00'):
+        out = bash("sudo keystone-manage token add %s %s %s %s" % (token, user, tenant, expiration))
+        return out.successful()
+
+#__ TODO __
+    @staticmethod
+    def check_token_exist(user, tenant, token='111222333444', expiration='2015-02-05T00:00'):
+        #out = bash("sudo keystone-manage token add %s %s %s %s" % (token, user, tenant, expiration))
+        return True
+
+    @staticmethod
+    def delete_token(user, tenant, token='111222333444', expiration='2015-02-05T00:00'):
+        out = bash("sudo keystone-manage token delete %s" % token)
+        return out.successful()
+
+    @staticmethod
+    def add_endpoint(tenant, template):
+        out = bash("sudo keystone-manage endpoint add %s %s" % (tenant, template))
+        return out.successful()
+
+    @staticmethod
+    def delete_endpoint(tenant, template):
+        out = bash("sudo keystone-manage endpoint delete %s %s" % (tenant, template))
+        return out.successful()
+
+
+
+
+
 
         ##===============##
         ##  NOVA MANAGE  ##
@@ -389,15 +619,9 @@ class nova_cli(object):
         return "/bin/false"
 
     @staticmethod
-    def set_novarc(project, user, destination):
+    def set_novarc(project, user, password, destination):
         if nova_cli.__novarc is None:
-            new_novarc = novarc()
-            path  = os.path.join(destination, 'novarc.zip')
-            out = bash('sudo nova-manage project zipfile %s %s %s' % (project, user, path))
-            if out.successful():
-                out = bash("unzip -uo %s -d %s" % (path,destination))
-                if out.successful() and new_novarc.load(os.path.join(destination, 'novarc')):
-                    nova_cli.__novarc = new_novarc
+            nova_cli.__novarc = novarc.create(project, user, password, destination)
 
         return nova_cli.__novarc
 
@@ -447,10 +671,29 @@ class nova_cli(object):
         return out.successful() and out.output_contains_pattern(".*%s.*" % cidr)
 
     @staticmethod
+    def glance_add(image_file, format, **kwargs):
+        out = nova_cli.__novarc.bash(
+            'glance add disk_format=%s container_format=%s is_public=True %s < "%s"'
+            % (format,
+               format,
+               " ".join(["%s=%s" % (key, value)
+                         for key, value in kwargs.iteritems()]),
+               image_file))
+        if not out.successful() or not "Added new image with ID:" in out.output_text():
+            return None
+        return int(out.output_text().split(':')[1])
+
+    @staticmethod
     def vm_image_register(image_name, owner, disk, ram, kernel):
-        out = bash('sudo nova-manage image all_register --image="%s" --kernel="%s" --ram="%s" --owner="%s" --name="%s"'
-        % (disk, kernel, ram, owner, image_name))
-        return out.successful()
+        kernel_id = nova_cli.glance_add(kernel, "aki", name="%s_kernel" % image_name)
+        if kernel_id is None:
+            return False
+        ramdisk_id = nova_cli.glance_add(kernel, "ari", name="%s_ramdisk" % image_name)
+        if ramdisk_id is None:
+            return False
+        rootfs_id = nova_cli.glance_add(
+            kernel, "ami", name=image_name, kernel_id=kernel_id, ramdisk_id=ramdisk_id)
+        return rootfs_id is not None
 
     @staticmethod
     def vm_image_registered(name):
@@ -477,7 +720,7 @@ class nova_cli(object):
 
     @staticmethod
     def get_image_id_list(name):
-        lines = nova_cli.get_novaclient_command_out("image-list | grep  %s | awk '{print $2}'" % name)
+        lines = nova_cli.get_novaclient_command_out("image-list | grep '%s\s' | awk '{print $2}'" % name)
         id_list = lines.split(os.linesep)
         return id_list
 
@@ -599,6 +842,20 @@ class nova_cli(object):
         if not nova_cli.get_instance_status(name):
             return True
         return False
+
+    @staticmethod
+    def billed_objects(project, min_instances, min_images):
+        out = nova_cli.__novarc.bash("nova2ools-billing list --images --instances | grep '^Project %s$' -A 4" % project)
+        if not out.successful():
+            return False
+        lines = out.output_text().split("\n")
+        if len(lines) < 4:
+            return False
+        if not lines[1].startswith("instances:") or int(lines[1].split(" ")[1]) < min_instances:
+            return False
+        if not lines[3].startswith("images:") or int(lines[3].split(" ")[1]) < min_images:
+            return False
+        return True
 
 
 
@@ -1010,12 +1267,10 @@ class expect_run(command_output):
 class ssh(command_output):
     def __init__(self, host, command=None, user=None, key=None, password=None):
 
-        options='-q -o StrictHostKeyChecking=no'
+        options='-q -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
         user_prefix = '' if user is None else '%s@' % user
 
-        #if password is None: options += ' -q'
         if key is not None: options += ' -i %s' % key
-
 
         cmd = "ssh {options} {user_prefix}{host} {command}".format(options=options,
                                                                    user_prefix=user_prefix,
@@ -1031,16 +1286,10 @@ class ssh(command_output):
 
     def __use_expect(self, cmd, password):
         spawned = expect_spawn(cmd)
-        ssh_newkey = 'Are you sure you want to continue connecting'
-        triggered_index = spawned.expect([pexpect.TIMEOUT, ssh_newkey, 'password:', pexpect.EOF])
+        triggered_index = spawned.expect([pexpect.TIMEOUT, pexpect.EOF, 'password:'])
         if triggered_index == 0:
             return spawned.get_output(-1)
         elif triggered_index == 1:
-            spawned.sendline ('yes')
-            triggered_index = spawned.expect([pexpect.TIMEOUT, 'password:'])
-            if triggered_index == 0:
-                return spawned.get_output(-1)
-        elif triggered_index == 3:
             return spawned.get_output(-1)
 
         spawned.sendline(password)
@@ -1049,6 +1298,7 @@ class ssh(command_output):
             spawned.terminate(force=True)
 
         return spawned.get_output()
+
 
 class networking(object):
 
@@ -1078,4 +1328,6 @@ class networking(object):
         @staticmethod
         def open_port_serves_protocol(host, port, proto):
             return bash('nmap -PN -p %s --open -sV %s | grep -iE "open.*%s"' % (port, host, proto)).successful()
+
+
 

@@ -23,18 +23,31 @@ db:
   password: nova
 
 user:
-  name: admin1
+  name: &name admin1
+  password: &password secrete
 
 project:
-  name: project1
+  name: &tenant project1
 
 network:
   cidr: 172.30.252.0/22
   nets: 1
   ips:  1024
-  cc: 172.30.252.1
+  &cc: 172.30.252.1
   external:
     cidr: 10.101.101.0/28
+
+keystone:
+  admin: *name
+  admin_password: *password
+  tenant: *tenant
+  region: kRegion
+  cc: *cc_ip_value
+  token: 999888777666
+
+glance:
+  api_conf: /etc/glance/glance-api.conf
+  registry_conf: /etc/glance/glance-registry.conf
 
 image:
   path: images/ttylinux.tar.gz
@@ -42,7 +55,7 @@ image:
   disk: root_fs.raw
   ram: initramfs-3.2.1.img
   kernel: vmlinuz-3.2.1-auto
-  name: rhel_image
+  name: rhel333
 
 vm:
   user: root
@@ -87,6 +100,7 @@ openstack_services:
  - glance-registry
 
 supplementary_services:
+ - messagebus
  - rabbitmq-server
  - mysqld
  - libvirtd
@@ -104,6 +118,7 @@ test_prepequisites:
  - curl
  - nmap
  - pexpect
+ - nova2ools
 
 packages_to_install:
  - libvirt

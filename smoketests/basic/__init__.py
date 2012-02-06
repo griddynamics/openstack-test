@@ -37,14 +37,18 @@ class step_assert(object):
         msg = 'Step "%s" failed ' % self.step.sentence
         assert_false(expr, msg)
 
+
+@step(u'sleep')
+def sleep(step):
+    time.sleep(400)
+
 @step(u'current user can execute sudo without password')
 def check_current_user_sudo_nopwd(step):
     step_assert(step).assert_true(utils.misc.can_execute_sudo_without_pwd())
 
 @step(u'every RPM package available:')
 def check_rpm_available(step):
-    for data in step.hashes:
-        step_assert(step).assert_true(utils.rpm.available(data['PackageName']))
+    step_assert(step).assert_true(utils.rpm.available([data['PackageName'] for data in step.hashes]))
 
 @step(u'I clean yum cached data')
 def clean_yum_caches(step):
@@ -60,14 +64,11 @@ def check_yum_repository_with_id_exists(step, id):
 
 @step(u'I install RPM package\(s\):')
 def install_rpm(step):
-    utils.rpm.clean_all_cached_data()
-    for data in step.hashes:
-        step_assert(step).assert_true(utils.rpm.install(data['PackageName']))
+    step_assert(step).assert_true(utils.rpm.install([data['PackageName'] for data in step.hashes]))
 
 @step(u'every RPM package is installed:')
 def check_rpm_installed(step):
-    for data in step.hashes:
-        step_assert(step).assert_true(utils.rpm.installed(data['PackageName']))
+    step_assert(step).assert_true(utils.rpm.installed([data['PackageName'] for data in step.hashes]))
 
 @step(u'I remove RPM package\(s\):')
 def remove_rpm(step):
@@ -159,7 +160,6 @@ def change_flag_file(step,flag_file):
     flags = [(flag['Name']) for flag in step.hashes ]
     step_assert(step).assert_true(utils.FlagFile(flag_file).remove_flags(flags).overwrite(flag_file))
 
-
 @step(u'the following flags in file "(.*?)" are set to:')
 def verify_flag_file(step,flag_file):
     flags = [(flag['Name'],flag['Value']) for flag in step.hashes ]
@@ -174,18 +174,16 @@ def verify_flag_not_exist_file(step,flag_file):
 def create_nova_admin(step, username):
     step_assert(step).assert_true(utils.nova_cli.create_admin(username))
 
-
 @step(u'I remove nova admin user "(.*?)"')
 def remove_nova_admin(step, username):
     step_assert(step).assert_true(utils.nova_cli.remove_admin(username))
-
 
 @step(u'nova user "(.*?)" exists')
 def nova_user_exists(step, user):
     step_assert(step).assert_true(utils.nova_cli.user_exists(user))
 
 @step(u'nova user "(.*?)" does not exists')
-def nova_user_not_exists(step, user):
+def nova_user_exists(step, user):
     step_assert(step).assert_false(utils.nova_cli.user_exists(user))
 
 @step(u'I create nova project "(.*?)" for user "(.*?)"')
@@ -197,12 +195,13 @@ def create_nova_project(step, name, user):
 def remove_nova_project(step, name):
     step_assert(step).assert_true(utils.nova_cli.remove_project(name))
 
+
 @step(u'nova project "(.*?)" exists')
 def nova_project_exists(step, project):
     step_assert(step).assert_true(utils.nova_cli.project_exists(project))
 
 @step(u'nova project "(.*?)" does not exists')
-def nova_project_not_exists(step, project):
+def nova_project_exists(step, project):
     step_assert(step).assert_false(utils.nova_cli.project_exists(project))
 
 @step(u'nova user "(.*?)" is the manager of the nova project "(.*?)"')
@@ -219,10 +218,14 @@ def create_nova_network(step, cidr, nets, ips):
 def nova_network_exists(step, cidr):
     step_assert(step).assert_true(utils.nova_cli.network_exists(cidr))
 
-
 @step(u'novarc for project "(.*?)", user "(.*?)" is available')
 def novarc_is_available(step, project, user):
     utils.nova_cli.set_novarc(project, user, bunch_working_dir)
+    step_assert(step).assert_true(utils.nova_cli.novarc_available())
+
+@step(u'novarc for project "(.*?)", user "(.*?)", password "(.*?)" is available')
+def novarc_is_available_ks(step, project, user, password):
+    utils.nova_cli.set_novarc(project, user, password, bunch_working_dir)
     step_assert(step).assert_true(utils.nova_cli.novarc_available())
 
 
@@ -262,6 +265,7 @@ def add_keypair(step, name, file):
 def delete_keypair(step, name):
     step_assert(step).assert_true(utils.nova_cli.delete_keypair(name))
 
+
 @step(u'keypair with name "(.*?)" exists')
 def keypair_exists(step, name):
     step_assert(step).assert_true(utils.nova_cli.keypair_exists(name))
@@ -270,12 +274,13 @@ def keypair_exists(step, name):
 def keypair_exists(step, name):
     step_assert(step).assert_false(utils.nova_cli.keypair_exists(name))
 
+
 @step(u'I start VM instance "(.*?)" using image "(.*?)",  flavor "(.*?)" and keypair "(.*?)"')
 def start_vm_instance(step, name,image, flavor, keyname):
     id_image_list = utils.nova_cli.get_image_id_list(image)
-    assert_equals(len(id_image_list), 1, "There are %s images with name %s: %s" % (len(id_image_list), name, str(id_image_list)))
+    assert_equals(len(id_image_list), 1, "There are %s images with name %s: %s" % (len(id_image_list), image, str(id_image_list)))
     id_flavor_list = utils.nova_cli.get_flavor_id_list(flavor)
-    assert_equals(len(id_flavor_list), 1, "There are %s flavors with name %s: %s" % (len(id_flavor_list), name, str(id_flavor_list)))
+    assert_equals(len(id_flavor_list), 1, "There are %s flavors with name %s: %s" % (len(id_flavor_list), flavor, str(id_flavor_list)))
     image_id = id_image_list[0]
     flavor_id = id_flavor_list[0]
     assert_true(image_id != '', image_id)
@@ -298,9 +303,9 @@ def start_vm_instance(step, name,image, flavor, keyname,sec_groups):
 @step(u'I start VM instance "(.*?)" using image "(.*?)",  flavor "(.*?)" and save auto-generated password')
 def start_vm_instance_save_root_pwd(step, name,image, flavor):
     id_image_list = utils.nova_cli.get_image_id_list(image)
-    assert_equals(len(id_image_list), 1, "There are %s images with name %s: %s" % (len(id_image_list), name, str(id_image_list)))
+    assert_equals(len(id_image_list), 1, "There are %s images with name %s: %s" % (len(id_image_list), image, str(id_image_list)))
     id_flavor_list = utils.nova_cli.get_flavor_id_list(flavor)
-    assert_equals(len(id_flavor_list), 1, "There are %s flavors with name %s: %s" % (len(id_flavor_list), name, str(id_flavor_list)))
+    assert_equals(len(id_flavor_list), 1, "There are %s flavors with name %s: %s" % (len(id_flavor_list), flavor, str(id_flavor_list)))
     image_id = id_image_list[0]
     flavor_id = id_flavor_list[0]
     assert_true(image_id != '', image_id)
@@ -319,6 +324,7 @@ def stop_vm_instance(step, name):
 @step(u'VM instance "(.*?)" is stopped within "(.*?)" seconds')
 def wait_instance_stopped(step, name, timeout):
     step_assert(step).assert_true(utils.nova_cli.wait_instance_stopped(name, int(timeout)))
+
 
 @step(u'I kill all processes:')
 def kill_all_processes(step):
@@ -362,7 +368,6 @@ def check_can_log_via_ssh_using_saved_pwd(step, name, user):
     assert_true(world.saved_root_password is not None)
     conf.log(conf.get_bash_log_file(),"load world.saved_root_password=%s" % world.saved_root_password)
     step_assert(step).assert_true(utils.ssh(ip, command="/bin/ls -l /", user=user, password=world.saved_root_password).successful())
-
 
 @step(u'I create loop device "(.*?)" in file "(.*?)" with size "(.*?)" gigabytes')
 def create_loop_device_in_file(step, source_dev, source_file, source_size):
@@ -452,6 +457,46 @@ def run_commands(step):
 def no_errors(step):
     pass
 
+#####  KEYSTONE
+@step(u'I init keystone db for IP "(.*?)", admin "(.*?)", password "(.*?)", project "(.*?)", token "(.*?)", region "(.*?)"')
+def keystone_init_db(step, host, user, password, project, token, region):
+    step_assert(step).assert_true(utils.keystone_manage.init_default(host, user, password, project, token, region))
+
+@step(u'I setup keystone middleware')
+def keystone_setup_middleware(step):
+    step_assert(step).assert_true(utils.keystone.setup_middleware())
+
+@step(u' I create keystone user "(.*?)" with password "(.*?)" in tenant "(.*?)"')
+def keystone_create_user(step, user, password, tenant):
+    step_assert(step).assert_true(utils.keystone_manage.create_user(user, password, tenant))
+
+@step(u' I see keystone user "(.*?)" exist')
+def keystone_user_exist(step, user):
+    step_assert(step).assert_true(utils.keystone_manage.check_user_exist(user))
+
+@step(u' I grant role "(.*?)" for keystone user "(.*?)"')
+def keystone_grant_role(step, role, user):
+    step_assert(step).assert_true(utils.keystone_manage.grant_role(role, user))
+
+@step(u' I see role "(.*?)" granted for keystone user "(.*?)"')
+def keystone_check_grant_role(step, role, user):
+    step_assert(step).assert_true(utils.keystone_manage.check_role_granted(role, user))
+
+@step(u' I create token "(.*?)" for keystone user "(.*?)" in tenant "(.*?)"')
+def keystone_create_token(step, token, user, tenant):
+    step_assert(step).assert_true(utils.keystone_manage.add_token(user, tenant, token))
+
+@step(u' I see token "(.*?)" for keystone user "(.*?)" in tenant "(.*?)" exist')
+def keystone_check_token_exist(step, token, user, tenant):
+    step_assert(step).assert_true(utils.keystone_manage.check_token_exist(user, tenant,token ))
+
+
+
+
+#####  BILLING
+@step(u'for project "(.*?)", at least "(.*?)" instances and "(.*?)" images are billed')
+def billed_objects(step, project, min_instances, min_images):
+    step_assert(step).assert_true(utils.nova_cli.billed_objects(project, int(min_instances), int(min_images)))
 
 
 #####  SECURITY GROUP
@@ -537,3 +582,4 @@ def check_address_associated(step, address,instance):
 @step(u'I see address "(.*?)" not associated with instance "(.*?)"')
 def check_address_associated(step, address,instance):
     step_assert(step).assert_false(utils.nova_cli.floating_check_associated(address, instance))
+
