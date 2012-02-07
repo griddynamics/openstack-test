@@ -11,8 +11,13 @@ import pexpect
 from nose.tools import assert_equals, assert_true, assert_false
 from pprint import pformat
 import conf
+from lettuce import world
 
 # Make Bash an object
+
+world.instances = {}
+world.images = {}
+world.volumes = {}
 
 
 class command_output(object):
@@ -42,6 +47,10 @@ class bash(command_output):
         retcode = commands.getstatusoutput(cmd)
         status, text = retcode
         conf.bash_log(cmd, status, text)
+
+#        print "cmd: %s" % cmd
+#        print "sta: %s" % status
+#        print "out: %s" % text
         return retcode
 
 
@@ -196,6 +205,9 @@ class service(object):
     def start(self):
         return self.__exec_cmd("sudo service %s start" % self.__name)
 
+    def restart(self):
+        return self.__exec_cmd("sudo service %s restart" % self.__name)
+
     def stop(self):
         return self.__exec_cmd("sudo service %s stop" % self.__name)
 
@@ -245,7 +257,6 @@ class FlagFile(object):
                     self.__commented_options.add(option)
                 self.options[option] = value
 
-
     def __load(self, filename):
         EscalatePermissions.read(filename, self)
 
@@ -265,6 +276,11 @@ class FlagFile(object):
             comment_sign = FlagFile.COMMENT_CHAR if option in self.__commented_options else ''
             file.write("%s%s=%s\n" % (comment_sign, option, value))
 
+    def remove_flags(self, flags):
+        for name in flags:
+            del self.options[name]
+        return self
+
     def apply_flags(self, pairs):
         for name, value in pairs:
             self.options[name.strip()] = value.strip()
@@ -276,7 +292,13 @@ class FlagFile(object):
             value = value.strip()
             if name not in self.options or self.options[name] != value:
                 return False
+        return True
 
+    def verify_existance(self, flags):
+        for name in flags:
+            name = name.strip()
+            if name not in self.options:
+                return False
         return True
 
     def overwrite(self, filename):
@@ -352,6 +374,14 @@ class nova_cli(object):
         return out.successful()
 
     @staticmethod
+    def create_network_via_flags(flags_dict):
+        params = ""
+        for flag, value in flags_dict.items():
+            params += " {flag}='{value}'".format(flag=flag, value=value)
+
+        return bash('sudo nova-manage network create %s' % params).successful()
+
+    @staticmethod
     def network_exists(cidr):
         out = bash('sudo nova-manage network list')
         return out.successful() and out.output_contains_pattern(".*%s.*" % cidr)
@@ -381,16 +411,34 @@ class nova_cli(object):
         id_list = lines.split(os.linesep)
         return id_list
 
+#    @staticmethod
+#    def start_vm_instance(name, image_id, flavor_id, key_name=None):
+#        key_name_arg = "" if key_name is None else "--key_name %s" % key_name
+#        return nova_cli.exec_novaclient_cmd("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
+
+
     @staticmethod
     def start_vm_instance(name, image_id, flavor_id, key_name=None):
         key_name_arg = "" if key_name is None else "--key_name %s" % key_name
-        return nova_cli.exec_novaclient_cmd("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
+        text = nova_cli.get_novaclient_command_out("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
+        if text:
+            table = ascii_table(text)
+            instance_id = table.select_values('Value', 'Property', 'id')
+            if instance_id:
+                world.instances[name] = instance_id[0]
+                return True
+        return False
+
 
     @staticmethod
     def start_vm_instance_return_output(name, image_id, flavor_id, key_name=None):
         key_name_arg = "" if key_name is None else "--key_name %s" % key_name
         text =  nova_cli.get_novaclient_command_out("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
         if text:
+            table = ascii_table(text)
+            instance_id = table.select_values('Value', 'Property', 'id')
+            if instance_id:
+                world.instances[name] = instance_id[0]
             return ascii_table(text)
         return None
 
@@ -434,12 +482,20 @@ class nova_cli(object):
 
     @staticmethod
     def get_instance_status(name):
-        return nova_cli.get_novaclient_command_out("list | grep %s | sed 's/|.*|.*|\(.*\)|.*|/\\1/'" % name).strip()
+        id = world.instances[name]
+        statuses = ascii_table(nova_cli.get_novaclient_command_out("list")).select_values('Status', 'ID', id)
+        return statuses[0]
+        #return nova_cli.get_novaclient_command_out("list | grep %s | sed 's/|.*|.*|\(.*\)|.*|/\\1/'" % world.instances[name]).strip()
 
     @staticmethod
     def get_instance_ip(name):
-        command = "list | grep %s | sed -e 's/|.*|.*|.*|\(.*\)|/\\1/' | sed -r 's/(.*)((\\b[0-9]{1,3}\.){3}[0-9]{1,3}\\b)/\\2/'" % name
-        return nova_cli.get_novaclient_command_out(command).strip()
+        id = world.instances[name]
+        #command = "list | grep %s | sed -e 's/|.*|.*|.*|\(.*\)|/\\1/' | sed -r 's/(.*)((\\b[0-9]{1,3}\.){3}[0-9]{1,3}\\b)/\\2/'" % name
+        table = ascii_table(nova_cli.get_novaclient_command_out("list"))
+        instance_ips = table.select_values('Networks', 'ID', id)
+        return instance_ips[0].rsplit('=')[-1]
+
+        #return nova_cli.get_novaclient_command_out(command).strip()
 
     @staticmethod
     def wait_instance_comes_up(name, timeout):
@@ -489,6 +545,7 @@ class misc(object):
 
     @staticmethod
     def generate_ssh_keypair(file):
+        bash("rm -f %s" % file)
         return bash("ssh-keygen -N '' -f {file} -t rsa -q".format(file=file)).successful()
 
     @staticmethod
@@ -619,6 +676,37 @@ class networking(object):
                 if bash('nmap -PN -p %s --open -sV %s | ' \
                         'grep -iE "open.*%s"' % (port, host, proto)).successful():
                     return True
+
+    class ifconfig(object):
+        @staticmethod
+        def interface_exists(name):
+            return bash('sudo ifconfig %s' % name).successful()
+
+        @staticmethod
+        def set(interface, options):
+            return bash('sudo ifconfig {interface} {options}'.format(interface=interface, options=options)).successful()
+
+
+
+    class brctl(object):
+        @staticmethod
+        def create_bridge(name):
+            return bash('sudo brctl addbr %s' % name).successful()
+
+        @staticmethod
+        def delete_bridge(name):
+            return networking.ifconfig.set(name, 'down') and bash('sudo brctl delbr %s' % name).successful()
+
+        @staticmethod
+        def add_interface(bridge, interface):
+            return bash('sudo brctl addif {bridge} {interface}'.format(bridge=bridge, interface=interface)).successful()
+
+    class ip(object):
+        class addr(object):
+            @staticmethod
+            def show(param_string):
+                return bash('sudo ip addr show %s' % param_string)
+
 
 
         

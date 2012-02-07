@@ -32,9 +32,19 @@ project:
   name: project1
 
 network:
-  cidr: 172.30.252.0/22
+  cidr: 172.30.252.0/24
   nets: 1
-  ips:  1024
+  ips:  254
+
+flat_network:
+  cidr: 172.30.253.0/24
+  nets: 1
+  ips:  254
+  label: flat
+  bridge:
+    name: br_flat
+    addr: 172.30.253.1
+    netmask: 255.255.255.0
 
 image:
   path: images/ttylinux.tar.gz
@@ -48,9 +58,9 @@ image:
 
 vm:
   user: root
-  flavor: m1.tiny
+  flavor: m1.small
   name: "rhel_instance1"
-  boot_timeout: 60
+  boot_timeout: 120
   ping_deadline: 30
   ssh_deadline: 60
   keypair:
@@ -62,10 +72,16 @@ vm2:
   user: root
   flavor: m1.tiny
   name: "rhel_instance2"
-  boot_timeout: 60
+  boot_timeout: 180
   ping_deadline: 30
   ssh_deadline: 60
 
+vm3:
+  user: root
+  flavor: m1.tiny
+  name: "singlethone"
+  boot_timeout: 60
+  ping_deadline: 30
 
 instance1: ins1
 instance2: ins2
