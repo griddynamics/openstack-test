@@ -14,6 +14,7 @@ compute_nodes:
 nova:
   rpm_packages: openstack-nova-node-full
   conf_file: /etc/nova/nova.conf
+  api_conf: /etc/nova/api-paste.ini
 
 db:
   admin: root
@@ -43,7 +44,7 @@ keystone:
   tenant: *tenant
   region: kRegion
   cc: *cc_ip_value
-  token: 999888777666
+  token: 111333555777
 
 glance:
   api_conf: /etc/glance/glance-api.conf
