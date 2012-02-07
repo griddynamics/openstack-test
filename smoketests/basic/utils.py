@@ -290,8 +290,6 @@ class service(object):
             and out.output_contains_pattern("(?i)stopped|unrecognized|dead|nodedown")
 
 
-
-
 class FlagFile(object):
     COMMENT_CHAR = '#'
     OPTION_CHAR =  '='
@@ -416,27 +414,6 @@ class novarc(dict):
         ##  KEYSTONE MANAGE  ##
         ##===================##
 
-class keystone(object):
-
-
-    @staticmethod
-    def init_db(host, user, password, project):
-        this_dir = os.path.dirname(os.path.abspath(__file__))
-        bash("rm -f /var/lib/keystone/keystone.db")
-        out = bash("sudo -u keystone keystone-init-db"
-                   " --host=%s --user=%s --password=%s"
-                   " --tenant=%s --token=999888777666"
-                   % (host, user, password, project))
-        return out.successful()
-
-    @staticmethod
-    def setup_middleware():
-        out = bash("keystone-setup-middleware")
-        return out.successful()
-
-
-## ^^^^^^^^   REMOVE   ^^^^^^^^^
-
 class keystone_manage(object):
     @staticmethod
     def init_default(host='127.0.0.1', user='admin', password='secrete',tenant='systenant', token='111222333444', region='regionOne'):
@@ -451,34 +428,24 @@ class keystone_manage(object):
                 region, service,
                 *[word.replace("%host%", host)
                   for word in ENDPOINT_TEMPLATES[service]])
-    # FIX IT
+
+# ___ TODO ___
+# FIX IT
             keystone_manage.add_endpoint(tenant,i)
             i=i+1
-
-#        keystone_manage.create_user(user,password,tenant)
-#        keystone_manage.grant_role('Admin',user)
-#        keystone_manage.add_token(user, tenant, token)
         return True
-
-
-    @staticmethod
-    def init_keystone(host, user, password, tenant):
-        create_tenant(tenant)
-        create_user(user, password, tenant)
-        add_role('Admin')
-        grant_role('Admin', user)
-#        for template in endpointTemplates:
-#            add_template(region='', service='', publicURL='', adminURL='', internalURL='', enabled='1', global='1')
-        
-        add_token(user,tenant, token)
-#        for endpoint in endpoints:
-#            add_endpoint(tenant, template):
-
 
     @staticmethod
     def create_tenant(name):
         out = bash("sudo keystone-manage tenant add %s" % name)
         return out.successful()
+
+    @staticmethod
+    def check_tenant_exist(name):
+        out = bash("sudo keystone-manage tenant list|grep %s" % name ).output_text()
+        if out.split()[1]:
+            return True
+        return False
 
     @staticmethod
     def delete_tenant(name):
@@ -490,14 +457,12 @@ class keystone_manage(object):
         out = bash("sudo keystone-manage user add %s %s %s" % (name,password,tenant))
         return out.successful()
 
-
-# __ TODO __
     @staticmethod
     def check_user_exist(name):
-        #out = bash("sudo keystone-manage user list").output_text
-        return True
-
-
+        out = bash("sudo keystone-manage user list|grep %s" % name ).output_text()
+        if out.split()[1]:
+            return True
+        return False
 
     @staticmethod
     def delete_user(name):
@@ -508,6 +473,13 @@ class keystone_manage(object):
     def add_role(name):
         out = bash("sudo keystone-manage role add %s" % name)
         return out.successful()
+
+    @staticmethod
+    def check_role_exist(name):
+        out = bash("sudo keystone-manage role list|grep %s" % name ).output_text()
+        if out.split()[1]:
+            return True
+        return False
 
     @staticmethod
     def delete_role(name):
@@ -545,11 +517,14 @@ class keystone_manage(object):
         out = bash("sudo keystone-manage token add %s %s %s %s" % (token, user, tenant, expiration))
         return out.successful()
 
-#__ TODO __
+#__ TODO __ (convert id to names, check it)
     @staticmethod
     def check_token_exist(user, tenant, token='111222333444', expiration='2015-02-05T00:00'):
-        #out = bash("sudo keystone-manage token add %s %s %s %s" % (token, user, tenant, expiration))
-        return True
+        out = bash("sudo keystone-manage token list|grep %s" % token ).output_text()
+        if out.split()[0]==token:
+            return True
+        return False
+
 
     @staticmethod
     def delete_token(user, tenant, token='111222333444', expiration='2015-02-05T00:00'):

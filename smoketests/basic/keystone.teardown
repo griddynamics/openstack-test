@@ -25,8 +25,8 @@ Feature: Remove keystone
             |  sed -i 's/pipeline = authtoken auth-context registryapp/pipeline = context registryapp/' "{{glance.registry_conf}}"  |  noFail  |
             |  mv -f /etc/nova/api-paste.ini /etc/nova/api-paste.ini.wkeystone  | noFail    |
             |  cp -f /etc/nova/api-paste.ini.wokeystone /etc/nova/api-paste.ini  | noFail    |
+            |  rm -f /var/lib/keystone/keystone.db  | noFail    |
 
-            |  rm -f /var/lib/keystone.db  | noFail    |
         And I restart services:
             | ServiceName   |
             {% for service in openstack_services %}
