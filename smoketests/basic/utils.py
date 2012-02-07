@@ -380,6 +380,14 @@ class nova_cli(object):
         return out.successful()
 
     @staticmethod
+    def create_network_via_flags(flags_dict):
+        params = ""
+        for flag, value in flags_dict.items():
+            params += " {flag}='{value}'".format(flag=flag, value=value)
+
+        return bash('sudo nova-manage network create %s' % params).successful()
+
+    @staticmethod
     def network_exists(cidr):
         out = bash('sudo nova-manage network list')
         return out.successful() and out.output_contains_pattern(".*%s.*" % cidr)
@@ -480,12 +488,20 @@ class nova_cli(object):
 
     @staticmethod
     def get_instance_status(name):
-        return nova_cli.get_novaclient_command_out("list | grep %s | sed 's/|.*|.*|\(.*\)|.*|/\\1/'" % world.instances[name]).strip()
+        id = world.instances[name]
+        statuses = ascii_table(nova_cli.get_novaclient_command_out("list")).select_values('Status', 'ID', id)
+        return statuses[0]
+        #return nova_cli.get_novaclient_command_out("list | grep %s | sed 's/|.*|.*|\(.*\)|.*|/\\1/'" % world.instances[name]).strip()
 
     @staticmethod
     def get_instance_ip(name):
-        command = "list | grep %s | sed -e 's/|.*|.*|.*|\(.*\)|/\\1/' | sed -r 's/(.*)((\\b[0-9]{1,3}\.){3}[0-9]{1,3}\\b)/\\2/'" % world.instances[name]
-        return nova_cli.get_novaclient_command_out(command).strip()
+        id = world.instances[name]
+        #command = "list | grep %s | sed -e 's/|.*|.*|.*|\(.*\)|/\\1/' | sed -r 's/(.*)((\\b[0-9]{1,3}\.){3}[0-9]{1,3}\\b)/\\2/'" % name
+        table = ascii_table(nova_cli.get_novaclient_command_out("list"))
+        instance_ips = table.select_values('Networks', 'ID', id)
+        return instance_ips[0].rsplit('=')[-1]
+
+        #return nova_cli.get_novaclient_command_out(command).strip()
 
     @staticmethod
     def wait_instance_comes_up(name, timeout):
@@ -535,6 +551,7 @@ class misc(object):
 
     @staticmethod
     def generate_ssh_keypair(file):
+        bash("rm -f %s" % file)
         return bash("ssh-keygen -N '' -f {file} -t rsa -q".format(file=file)).successful()
 
     @staticmethod
@@ -600,12 +617,10 @@ class expect_run(command_output):
 class ssh(command_output):
     def __init__(self, host, command=None, user=None, key=None, password=None):
 
-        options='-q -o StrictHostKeyChecking=no'
+        options='-q -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
         user_prefix = '' if user is None else '%s@' % user
 
-        #if password is None: options += ' -q'
         if key is not None: options += ' -i %s' % key
-
 
         cmd = "ssh {options} {user_prefix}{host} {command}".format(options=options,
                                                                    user_prefix=user_prefix,
@@ -621,16 +636,10 @@ class ssh(command_output):
 
     def __use_expect(self, cmd, password):
         spawned = expect_spawn(cmd)
-        ssh_newkey = 'Are you sure you want to continue connecting'
-        triggered_index = spawned.expect([pexpect.TIMEOUT, ssh_newkey, 'password:', pexpect.EOF])
+        triggered_index = spawned.expect([pexpect.TIMEOUT, pexpect.EOF, 'password:'])
         if triggered_index == 0:
             return spawned.get_output(-1)
         elif triggered_index == 1:
-            spawned.sendline ('yes')
-            triggered_index = spawned.expect([pexpect.TIMEOUT, 'password:'])
-            if triggered_index == 0:
-                return spawned.get_output(-1)
-        elif triggered_index == 3:
             return spawned.get_output(-1)
 
         spawned.sendline(password)
@@ -639,6 +648,7 @@ class ssh(command_output):
             spawned.terminate(force=True)
 
         return spawned.get_output()
+
 
 class networking(object):
 
@@ -668,6 +678,35 @@ class networking(object):
         @staticmethod
         def open_port_serves_protocol(host, port, proto):
             return bash('nmap -PN -p %s --open -sV %s | grep -iE "open.*%s"' % (port, host, proto)).successful()
+
+    class ifconfig(object):
+        @staticmethod
+        def interface_exists(name):
+            return bash('ifconfig %s' % name).successful()
+
+        @staticmethod
+        def set(interface, options):
+            return bash('ifconfig {interface} {options}'.format(interface=interface, options=options)).successful()
+
+    class brctl(object):
+        @staticmethod
+        def create_bridge(name):
+            return bash('sudo brctl addbr %s' % name).successful()
+
+        @staticmethod
+        def delete_bridge(name):
+            return bash('sudo brctl delbr %s' % name).successful()
+
+        @staticmethod
+        def add_interface(bridge, interface):
+            return bash('sudo brctl addif {bridge} {interface}'.format(bridge=bridge, interface=interface)).successful()
+
+    class ip(object):
+        class addr(object):
+            @staticmethod
+            def show(param_string):
+                return bash('ip addr show %s' % param_string)
+
 
 
         

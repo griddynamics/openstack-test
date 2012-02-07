@@ -197,6 +197,14 @@ def create_nova_network(step, cidr, nets, ips):
     step_assert(step).assert_true(utils.nova_cli.create_network(cidr, nets, ips))
 
 
+@step(u'I create nova network with the following parameters:')
+def create_nova_network_by_params(step):
+    flags = {}
+    for data in step.hashes:
+        flags[data['Parameter']] = data['Value']
+    step_assert(step).assert_true(utils.nova_cli.create_network_via_flags(flags))
+
+
 @step(u'nova network "(.*?)" exists')
 def nova_network_exists(step, cidr):
     step_assert(step).assert_true(utils.nova_cli.network_exists(cidr))
@@ -256,6 +264,30 @@ def start_vm_instance(step, name,image, flavor, keyname):
     assert_true(flavor_id != '', flavor_id)
     step_assert(step).assert_true(utils.nova_cli.start_vm_instance(name, image_id, flavor_id, keyname))
 
+@step(u'I start VM instance "(.*?)" using image "(.*?)", flavor "(.*?)"')
+def start_vm_instance_no_keypair(step, name,image, flavor):
+    id_image_list = utils.nova_cli.get_image_id_list(image)
+    assert_equals(len(id_image_list), 1, "There are %s images with name %s: %s" % (len(id_image_list), name, str(id_image_list)))
+    id_flavor_list = utils.nova_cli.get_flavor_id_list(flavor)
+    assert_equals(len(id_flavor_list), 1, "There are %s flavors with name %s: %s" % (len(id_flavor_list), name, str(id_flavor_list)))
+    image_id = id_image_list[0]
+    flavor_id = id_flavor_list[0]
+    assert_true(image_id != '', image_id)
+    assert_true(flavor_id != '', flavor_id)
+    step_assert(step).assert_true(utils.nova_cli.start_vm_instance(name, image_id, flavor_id))
+
+@step(u'I can not start VM instance "(.*?)" using image "(.*?)", flavor "(.*?)"')
+def start_vm_instance(step, name,image, flavor):
+    id_image_list = utils.nova_cli.get_image_id_list(image)
+    assert_equals(len(id_image_list), 1, "There are %s images with name %s: %s" % (len(id_image_list), name, str(id_image_list)))
+    id_flavor_list = utils.nova_cli.get_flavor_id_list(flavor)
+    assert_equals(len(id_flavor_list), 1, "There are %s flavors with name %s: %s" % (len(id_flavor_list), name, str(id_flavor_list)))
+    image_id = id_image_list[0]
+    flavor_id = id_flavor_list[0]
+    assert_true(image_id != '', image_id)
+    assert_true(flavor_id != '', flavor_id)
+    step_assert(step).assert_false(utils.nova_cli.start_vm_instance(name, image_id, flavor_id))
+
 @step(u'I start VM instance "(.*?)" using image "(.*?)",  flavor "(.*?)" and save auto-generated password')
 def start_vm_instance_save_root_pwd(step, name,image, flavor):
     id_image_list = utils.nova_cli.get_image_id_list(image)
@@ -309,3 +341,37 @@ def check_can_log_via_ssh_using_saved_pwd(step, name, user):
     assert_true(world.saved_root_password is not None)
     conf.log(conf.get_bash_log_file(),"load world.saved_root_password=%s" % world.saved_root_password)
     step_assert(step).assert_true(utils.ssh(ip, command="/bin/ls -l /", user=user, password=world.saved_root_password).successful())
+
+@step(u'I create bridge "(.*)"')
+def create_bridge(step, bridge_name):
+    step_assert(step).assert_true(utils.networking.brctl.create_bridge(bridge_name))
+
+
+@step('I add interface "(.*)" to the bridge "(.*)')
+def add_interface_to_bridge(step, interface, bridge):
+    step_assert(step).assert_true(utils.networking.brctl.add_interface(bridge, interface))
+
+@step('I configure interface "(.*)" assigning address "(.*)" and netmask "(.*)"')
+def configure_ip_address_on_interface(step, interface, address, netmask):
+    step_assert(step).assert_true(
+        utils.networking.ifconfig.set(
+            interface, '{address} netmask {netmask}'.format(address=address, netmask=netmask)))
+
+@step('interface "(.*)" has address "(.*)"')
+def interface_has_address(step, interface, address):
+    step_assert(step).assert_true(
+        utils.networking.ip.addr.show(interface).output_contains_pattern('inet(\s+){address}'.format(address=address)))
+
+
+@step('interface "(.*)" exists')
+def interface_exists(step, interface):
+    step_assert(step).assert_true(utils.networking.ifconfig.interface_exists(interface))
+
+@step('I delete bridge "(.*)')
+def delete_bridge(step, bridge):
+    step_assert(step).assert_true(utils.networking.brctl.delete_bridge(bridge))
+
+
+@step('interface does not "(.*)" exist')
+def interface_does_not_exist(step, interface):
+    step_assert(step).assert_false(utils.networking.ifconfig.interface_exists(interface))

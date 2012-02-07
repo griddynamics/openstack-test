@@ -16,7 +16,7 @@ Feature: Change flags in nova.conf to default values
             | Name                      | Value                                         |
             | --flat_network            | true                                          |
             | --flat_injected           | true                                          |
-            | --fixed_range             | "{{network.cidr}}"                            |
+            | --fixed_range             | "{{flat_network.cidr}}"                            |
          When I change flag file "{{nova.conf_file}}" by removing flag values:
             | Name                      |
             | --flat_network            |
@@ -46,3 +46,7 @@ Feature: Change flags in nova.conf to default values
             | {{ service }} |
             {% endfor %}
 
+    Scenario: Delete bridge interface
+        Given interface "{{flat_network.bridge.name}}" exists
+        When I delete bridge "{{flat_network.bridge.name}}"
+        Then interface does not "{{flat_network.bridge.name}}" exist

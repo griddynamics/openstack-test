@@ -11,14 +11,14 @@ Feature: Change flags in nova.conf to test Flat Networking
             | --network_manager         | nova.network.manager.FlatManager              |
             | --flat_network            | true                                          |
             | --flat_injected           | true                                          |
-            | --fixed_range             | "{{network.cidr}}"                            |
+            | --fixed_range             | "{{flat_network.cidr}}"                       |
 
          Then the following flags in file "{{nova.conf_file}}" are set to:
             | Name                      | Value                                         |
             | --network_manager         | nova.network.manager.FlatManager              |
             | --flat_network            | true                                          |
             | --flat_injected           | true                                          |
-            | --fixed_range             | "{{network.cidr}}"                            |
+            | --fixed_range             | "{{flat_network.cidr}}"                       |
 
 
     Scenario: Restart OpenStack services
@@ -38,3 +38,55 @@ Feature: Change flags in nova.conf to test Flat Networking
             | {{ service }} |
             {% endfor %}
 
+    Scenario: Create bridge for FlatNetworking
+        Given current user can execute sudo without password
+        When I create bridge "{{flat_network.bridge.name}}"
+        And I add interface "{{network_interface}}" to the bridge "{{flat_network.bridge.name}}"
+        And I configure interface "{{flat_network.bridge.name}}" assigning address "{{flat_network.bridge.addr}}" and netmask "{{flat_network.bridge.netmask}}"
+        Then interface "{{flat_network.bridge.name}}" has address "{{flat_network.bridge.addr}}"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Scenario: Create network
+        Given nova project "{{project.name}}" exists
+        When I create nova network with the following parameters:
+            | Parameter              | Value                       |
+            | --bridge               | {{flat_network.bridge}}     |
+            | --fixed_range_v4       | {{flat_network.cidr}}       |
+            | --network_size         | {{flat_network.ips}}        |
+            | --num_networks         | {{flat_network.nets}}       |
+            | --label                | {{flat_network.label}}      |
+        Then nova network "{{flat_network.cidr}}" exists

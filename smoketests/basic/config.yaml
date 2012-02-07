@@ -2,9 +2,9 @@ build_environment: 'master'
 yum_repository: 'openstack-rhel'
 
 cc_external_ip:
-  &cc_ip_value 127.0.0.1
+  &cc_ip_value 172.18.40.10
 
-network_interface: eth0
+network_interface: bond0
 
 
 compute_nodes:
@@ -32,13 +32,23 @@ project:
   name: project1
 
 network:
-  cidr: 172.30.252.0/22
+  cidr: 172.30.252.0/24
   nets: 1
-  ips:  1024
+  ips:  254
+
+flat_network:
+  cidr: 172.30.253.0/24
+  nets: 1
+  ips:  254
+  label: flat
+  bridge:
+    name: br_flat
+    addr: 172.30.253.1
+    netmask: 255.255.255.0
 
 image:
   path: images/ttylinux.tar.gz
-  url: http://127.0.0.1/images/rhel_image.tar.gz
+  url: http://osc-build.vm.griddynamics.net/images/rhel_image.tar.gz
   disk: rootfs.raw
   ram: initramfs-2.6.32-131.0.15.el6.x86_64.img
   kernel: vmlinuz-2.6.32-131.0.15.el6.x86_64
@@ -48,7 +58,7 @@ image:
 
 vm:
   user: root
-  flavor: m1.tiny
+  flavor: m1.small
   name: "rhel_instance1"
   boot_timeout: 120
   ping_deadline: 30
@@ -64,6 +74,12 @@ vm2:
   boot_timeout: 180
   ping_deadline: 30
 
+vm3:
+  user: root
+  flavor: m1.tiny
+  name: "singlethone"
+  boot_timeout: 60
+  ping_deadline: 30
 
 instance1: ins1
 instance2: ins2
@@ -74,8 +90,8 @@ openstack_services:
  - nova-compute
  - nova-network
  - nova-scheduler
- - openstack-glance-api
- - openstack-glance-registry
+ - glance-api
+ - glance-registry
 
 supplementary_services:
  - rabbitmq-server
