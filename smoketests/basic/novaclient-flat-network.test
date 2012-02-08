@@ -6,7 +6,47 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
     Scenario: Setup prerequisites
         Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys"
 
+    #Setup part
 
+    Scenario: Configure OpenStack compute for Flat Network setup
+            Given every RPM package is installed:
+                | PackageName   |
+                {% for package in packages_to_install %}
+                | {{ package }} |
+                {% endfor %}
+            When I change flag file "{{nova.conf_file}}" by setting flag values:
+                | Name                      | Value                                         |
+                | --network_manager         | nova.network.manager.FlatManager              |
+                | --flat_network            | true                                          |
+                | --flat_injected           | true                                          |
+                | --fixed_range             | "{{flat_network.cidr}}"                       |
+
+            Then the following flags in file "{{nova.conf_file}}" are set to:
+                | Name                      | Value                                         |
+                | --network_manager         | nova.network.manager.FlatManager              |
+                | --flat_network            | true                                          |
+                | --flat_injected           | true                                          |
+                | --fixed_range             | "{{flat_network.cidr}}"                       |
+
+
+        Scenario: Restart OpenStack services
+            Given every service is running:
+                | ServiceName   |
+                {% for service in supplementary_services %}
+                | {{ service }} |
+                {% endfor %}
+            When I restart services:
+                | ServiceName   |
+                {% for service in openstack_services %}
+                | {{ service }} |
+                {% endfor %}
+            Then every service is running:
+                | ServiceName   |
+                {% for service in openstack_services %}
+                | {{ service }} |
+                {% endfor %}
+
+    #Test part
     Scenario: Start single instance and bind with pre-uploaded keypair
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM image "{{image.name}}" is registered
@@ -14,7 +54,54 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
         When I start VM instance "{{vm.name}}" using image "{{image.name}}",  flavor "{{vm.flavor}}" and keypair "{{vm.keypair.name}}"
         Then VM instance "{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
         And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-        And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol
+        And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol within "{{vm.ssh_deadline}}" seconds
         And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}"
 
+    #Teardown part
+
+    Scenario: Configure OpenStack compute: restore Vlan setup
+             Given the following flags in file "{{nova.conf_file}}" are set to:
+                | Name                      | Value                                         |
+                | --network_manager         | nova.network.manager.FlatManager              |
+             When I change flag file "{{nova.conf_file}}" by setting flag values:
+                | Name                      | Value                                         |
+                | --network_manager         | nova.network.manager.VlanManager              |
+             Then the following flags in file "{{nova.conf_file}}" are set to:
+                | Name                      | Value                                         |
+                | --network_manager         | nova.network.manager.VlanManager              |
+
+    Scenario: Remove flags
+         Given the following flags in file "{{nova.conf_file}}" are set to:
+            | Name                      | Value                                         |
+            | --flat_network            | true                                          |
+            | --flat_injected           | true                                          |
+            | --fixed_range             | "{{flat_network.cidr}}"                       |
+         When I change flag file "{{nova.conf_file}}" by removing flag values:
+            | Name                      |
+            | --flat_network            |
+            | --flat_injected           |
+            | --fixed_range             |
+         Then the following flags are not in "{{nova.conf_file}}":
+            | Name                      |
+            | --flat_network            |
+            | --flat_injected           |
+            | --fixed_range             |
+
+
+    Scenario: Restart OpenStack services
+        Given every service is running:
+            | ServiceName   |
+            {% for service in supplementary_services %}
+            | {{ service }} |
+            {% endfor %}
+        When I restart services:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+        Then every service is running:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
 
