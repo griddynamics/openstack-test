@@ -28,8 +28,40 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
         And I can log into VM "{{vm2.name}}" via SSH as "{{vm2.user}}" using saved password
     
 
-    Scenario: Start multiple instances with same name
+    Scenario: Start multiple instances with same name when unique instance names enabled
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM image "{{image.name}}" is registered
-        When I start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
+        When I change flag file "{{nova.conf_file}}" by setting flag values:
+                                      |     Name           | Value |
+                                      | project_uniq_names | true  |
+        And I stop services:
+                                      |     ServiceName    |
+                                      {% for service in openstack_services %}
+                                      | {{service}}        |
+                                      {% endfor %}
+        And I start services:
+                                      |     ServiceName    |
+                                      {% for service in openstack_services %}
+                                      | {{service}}        |
+                                      {% endfor %}
+	And I start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
         Then I can not start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
+
+    Scenario: Start multiple instances with same name when unique instance names disabled
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And VM image "{{image.name}}" is registered
+        When I change flag file "{{nova.conf_file}}" by setting flag values:
+                                      |     Name           | Value |
+                                      | project_uniq_names | false |
+        And I stop services:
+                                      |     ServiceName    |
+                                      {% for service in openstack_services %}
+                                      | {{service}}        |
+                                      {% endfor %}
+        And I start services:
+                                      |     ServiceName    |
+                                      {% for service in openstack_services %}
+                                      | {{service}}        |
+                                      {% endfor %}
+        And I start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
+        Then I start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
