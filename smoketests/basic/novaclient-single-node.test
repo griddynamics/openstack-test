@@ -14,8 +14,7 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
         When I start VM instance "{{vm.name}}" using image "{{image.name}}",  flavor "{{vm.flavor}}" and keypair "{{vm.keypair.name}}"
         Then VM instance "{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
         And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-        And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol
-        #And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}"
+        And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol within "{{vm.ssh_deadline}}" seconds
         And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}"
         And I login to VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}" and run commands:
             |  Command  |   Expected  |
@@ -28,6 +27,6 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
         When I start VM instance "{{vm2.name}}" using image "{{image.name}}",  flavor "{{vm2.flavor}}" and save auto-generated password
         Then VM instance "{{vm2.name}}" comes up within "{{vm2.boot_timeout}}" seconds
         And VM instance "{{vm2.name}}" is pingable within "{{vm2.ping_deadline}}" seconds
-        And I see that "ssh" port of VM instance "{{vm2.name}}" is open and serves "ssh" protocol
+        And I see that "ssh" port of VM instance "{{vm2.name}}" is open and serves "ssh" protocol within "{{vm2.ssh_deadline}}" seconds
         And I can log into VM "{{vm2.name}}" via SSH as "{{vm2.user}}" using saved password
 

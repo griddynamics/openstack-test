@@ -154,15 +154,9 @@ gpgcheck=1
 """.format(repo_id=repo)
         else:
             repo_config = """
-[os-master-repo]
-name=Grid Dynamics OpenStack RHEL
-baseurl=http://osc-build.vm.griddynamics.net/{repo_id}
-enabled=1
-gpgcheck=1
-
 [{repo_id}]
 name=Grid Dynamics OpenStack RHEL
-baseurl=http://osc-build.vm.griddynamics.net/{env}/{repo_id}
+baseurl=http://osc-build.vm.griddynamics.net/unstable/{env}/{repo_id}
 enabled=1
 gpgcheck=1
 
@@ -1301,8 +1295,12 @@ class networking(object):
 
     class nmap(object):
         @staticmethod
-        def open_port_serves_protocol(host, port, proto):
-            return bash('nmap -PN -p %s --open -sV %s | grep -iE "open.*%s"' % (port, host, proto)).successful()
+        def open_port_serves_protocol(host, port, proto, timeout):
+            start_time = datetime.now()
+            while(datetime.now() - start_time).seconds < int(timeout):
+                if bash('nmap -PN -p %s --open -sV %s | ' \
+                        'grep -iE "open.*%s"' % (port, host, proto)).successful():
+                    return True
 
 
 

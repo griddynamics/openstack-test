@@ -2,9 +2,9 @@ build_environment: 'master'
 yum_repository: 'openstack-rhel'
 
 cc_external_ip:
-  &cc_ip_value 127.0.0.1
+  &cc_ip_value 172.18.40.10
 
-network_interface: eth0
+network_interface: bond0
 
 
 compute_nodes:
@@ -64,6 +64,7 @@ vm:
   name: "rhelinstance1"
   boot_timeout: 180
   ping_deadline: 90
+  ssh_deadline: 60
   keypair:
     name: test_key
     private: id_rsa_generated
@@ -75,6 +76,7 @@ vm2:
   name: "rhelinstance2"
   boot_timeout: 180
   ping_deadline: 90
+  ssh_deadline: 60
   keypair:
     name: test_key
     private: id_rsa_generated
