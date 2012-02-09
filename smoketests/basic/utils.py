@@ -254,10 +254,10 @@ class service(object):
         return bash(cmd)
 
     def start(self):
-        return self.__exec_cmd("sudo service %s start && chkconfig %s on" % (self.__name,self.__name))
+        return self.__exec_cmd("sudo service %s start" % self.__name)
 
     def stop(self):
-        return self.__exec_cmd("sudo service %s stop && chkconfig %s off" % (self.__name,self.__name))
+        return self.__exec_cmd("sudo service %s stop" % self.__name)
 
     def restart(self):
         return self.__exec_cmd("sudo service %s restart" % self.__name)
@@ -564,7 +564,7 @@ class nova_manage(object):
 
     @staticmethod
     def vm_image_register(image_name, owner, disk, ram, kernel):
-        if not(ram and kernel):
+        if (ram and kernel) not in ('', None):
             out = bash('sudo nova-manage image all_register --image="%s" --kernel="%s" --ram="%s" --owner="%s" --name="%s"'
                 % (disk, kernel, ram, owner, image_name))
         else:

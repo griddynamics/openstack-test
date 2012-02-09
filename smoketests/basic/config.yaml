@@ -2,9 +2,9 @@ build_environment: 'master'
 yum_repository: 'openstack-rhel'
 
 cc_external_ip:
-  &cc_ip_value 172.18.40.10
+  &cc_ip_value 127.0.0.1
 
-network_interface: bond0
+network_interface: eth0
 
 
 compute_nodes:
@@ -50,13 +50,19 @@ glance:
   api_conf: /etc/glance/glance-api.conf
   registry_conf: /etc/glance/glance-registry.conf
 
-image:
-  path: images/ttylinux.tar.gz
+image2:
+  path: images/mini_image.tar.gz
   url: http://127.0.0.1/images/mini_image.tar.gz
   disk: root_fs.raw
   ram: initramfs-3.2.1.img
   kernel: vmlinuz-3.2.1-auto
-  name: rhel333
+  name: mini_image
+
+image:
+  path: images/ttylinux.tar.gz
+  url: http://127.0.0.1/images/mini_image.img
+  disk: mini_image.img
+  name: solid_mini_image
 
 vm:
   user: root
@@ -64,7 +70,6 @@ vm:
   name: "rhelinstance1"
   boot_timeout: 180
   ping_deadline: 90
-  ssh_deadline: 60
   keypair:
     name: test_key
     private: id_rsa_generated
@@ -76,7 +81,6 @@ vm2:
   name: "rhelinstance2"
   boot_timeout: 180
   ping_deadline: 90
-  ssh_deadline: 60
   keypair:
     name: test_key
     private: id_rsa_generated

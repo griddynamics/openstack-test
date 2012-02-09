@@ -239,6 +239,10 @@ def download_tarball_then_unpack(step, url):
     file = os.path.join(bunch_working_dir, utils.networking.http.basename(url))
     step_assert(step).assert_true(utils.misc.extract_targz(file, bunch_working_dir))
 
+@step(u'I download VM image tarball at "(.*?)"')
+def download_tarball(step, url):
+    step_assert(step).assert_true(utils.networking.http.get(url, bunch_working_dir))
+
 @step(u'using glance I register VM image "(.*?)" for owner "(.*?)" using disk "(.*?)", ram "(.*?)", kernel "(.*?)"')
 def register_all_images(step, name, owner, disk, ram, kernel):
     step_assert(step).assert_true(utils.glance_cli.vm_image_register(name, owner,
@@ -254,7 +258,7 @@ def register_all_images(step, name, owner, disk, ram, kernel):
 
 @step(u'using nova-manage I register VM image "(.*?)" for owner "(.*?)" using disk "(.*?)"')
 def register_all_images(step, name, owner, disk):
-    step_assert(step).assert_true(utils.nova_manage.vm_image_register(name, owner, os.path.join(bunch_working_dir, kernel)))
+    step_assert(step).assert_true(utils.nova_manage.vm_image_register(name, owner, os.path.join(bunch_working_dir, disk), None, None))
 
 
 @step(u'VM image "(.*?)" is registered')
