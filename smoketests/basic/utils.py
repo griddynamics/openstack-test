@@ -537,9 +537,6 @@ class keystone_manage(object):
 
 
 
-
-
-
         ##===============##
         ##  NOVA MANAGE  ##
         ##===============##
@@ -565,6 +562,16 @@ class nova_manage(object):
                     return True
         return False
 
+    @staticmethod
+    def vm_image_register(image_name, owner, disk, ram, kernel):
+        if not(ram and kernel):
+            out = bash('sudo nova-manage image all_register --image="%s" --kernel="%s" --ram="%s" --owner="%s" --name="%s"'
+                % (disk, kernel, ram, owner, image_name))
+        else:
+            out = bash('sudo nova-manage image image_register --path="%s" --owner="%s" --name="%s"'
+                % (disk, owner, image_name))
+
+        return out.successful()
 
 
         ##============##
@@ -639,29 +646,12 @@ class nova_cli(object):
         out = bash('sudo nova-manage network list')
         return out.successful() and out.output_contains_pattern(".*%s.*" % cidr)
 
-    @staticmethod
-    def glance_add(image_file, format, **kwargs):
-        out = nova_cli.__novarc.bash(
-            'glance add disk_format=%s container_format=%s is_public=True %s < "%s"'
-            % (format,
-               format,
-               " ".join(["%s=%s" % (key, value)
-                         for key, value in kwargs.iteritems()]),
-               image_file))
-        if not out.successful() or not "Added new image with ID:" in out.output_text():
-            return None
-        return int(out.output_text().split(':')[1])
+
+#___ TODO ____
 
     @staticmethod
     def vm_image_register(image_name, owner, disk, ram, kernel):
-        kernel_id = nova_cli.glance_add(kernel, "aki", name="%s_kernel" % image_name)
-        if kernel_id is None:
-            return False
-        ramdisk_id = nova_cli.glance_add(kernel, "ari", name="%s_ramdisk" % image_name)
-        if ramdisk_id is None:
-            return False
-        rootfs_id = nova_cli.glance_add(
-            kernel, "ami", name=image_name, kernel_id=kernel_id, ramdisk_id=ramdisk_id)
+        print "TODO"
         return rootfs_id is not None
 
     @staticmethod
@@ -1083,6 +1073,41 @@ class euca_cli(object):
             euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto='icmp', src_host='', dst_port='-1'):
                 return True
         return euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto, src_host, dst_port)
+
+
+        ##===================##
+        ##  GLANCE           ##
+        ##===================##
+
+
+class glance_cli(object):
+    @staticmethod
+    def glance_add(image_file, format, **kwargs):
+#        out = nova_cli.__novarc.bash(
+        out = bash(
+            'glance add disk_format=%s container_format=%s is_public=True %s < "%s"'
+            % (format,
+               format,
+               " ".join(["%s=%s" % (key, value)
+                         for key, value in kwargs.iteritems()]),
+               image_file))
+        if not out.successful() or not "Added new image with ID:" in out.output_text():
+            return None
+        return int(out.output_text().split(':')[1])
+
+
+    @staticmethod
+    def vm_image_register(image_name, owner, disk, ram, kernel):
+        kernel_id = glance_cli.glance_add(kernel, "aki", name="%s_kernel" % image_name)
+        if kernel_id is None:
+            return False
+        ramdisk_id = glance_cli.glance_add(kernel, "ari", name="%s_ramdisk" % image_name)
+        if ramdisk_id is None:
+            return False
+        rootfs_id = glance_cli.glance_add(
+            kernel, "ami", name=image_name, kernel_id=kernel_id, ramdisk_id=ramdisk_id)
+        return rootfs_id is not None
+
 
 
 class misc(object):

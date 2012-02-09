@@ -7,5 +7,7 @@ Feature: Create user and project using python-novaclient CLI
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM image tarball is available at "{{image.url}}"
         When I download VM image tarball at "{{image.url}}" and unpack it
-        And I register VM image "{{image.name}}" for owner "{{user.name}}" using disk "{{image.disk}}", ram "{{image.ram}}", kernel "{{image.kernel}}"
-        Then VM image "{{image.name}}" is registered
+        And using glance I register VM image "{{image.name}}" for owner "{{user.name}}" using disk "{{image.disk}}", ram "{{image.ram}}", kernel "{{image.kernel}}"
+#        And using nova-manage I register VM image "{{image.name}}" for owner "{{user.name}}" using disk "{{image.disk}}", ram "{{image.ram}}", kernel "{{image.kernel}}"
+#        And using nova-manage I register VM image "{{image.name}}" for owner "{{user.name}}" using disk "{{image.solid}}"
+#-FIX-   Then VM image "{{image.name}}" is registered

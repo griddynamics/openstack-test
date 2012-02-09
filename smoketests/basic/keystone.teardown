@@ -26,6 +26,7 @@ Feature: Remove keystone
             |  mv -f /etc/nova/api-paste.ini /etc/nova/api-paste.ini.wkeystone  | noFail    |
             |  cp -f /etc/nova/api-paste.ini.wokeystone /etc/nova/api-paste.ini  | noFail    |
             |  rm -f /var/lib/keystone/keystone.db  | noFail    |
+            |  rm -rf /etc/keystone     | noFail    |
 
         And I restart services:
             | ServiceName   |

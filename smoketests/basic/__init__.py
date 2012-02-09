@@ -220,7 +220,7 @@ def nova_network_exists(step, cidr):
 
 @step(u'novarc for project "(.*?)", user "(.*?)" is available')
 def novarc_is_available(step, project, user):
-    utils.nova_cli.set_novarc(project, user, bunch_working_dir)
+    utils.nova_cli.set_novarc(project, user, None, bunch_working_dir)
     step_assert(step).assert_true(utils.nova_cli.novarc_available())
 
 @step(u'novarc for project "(.*?)", user "(.*?)", password "(.*?)" is available')
@@ -239,12 +239,22 @@ def download_tarball_then_unpack(step, url):
     file = os.path.join(bunch_working_dir, utils.networking.http.basename(url))
     step_assert(step).assert_true(utils.misc.extract_targz(file, bunch_working_dir))
 
-@step(u'I register VM image "(.*?)" for owner "(.*?)" using disk "(.*?)", ram "(.*?)", kernel "(.*?)"')
+@step(u'using glance I register VM image "(.*?)" for owner "(.*?)" using disk "(.*?)", ram "(.*?)", kernel "(.*?)"')
 def register_all_images(step, name, owner, disk, ram, kernel):
-    step_assert(step).assert_true(utils.nova_cli.vm_image_register(name, owner,
+    step_assert(step).assert_true(utils.glance_cli.vm_image_register(name, owner,
                                                                     os.path.join(bunch_working_dir,disk),
                                                                     os.path.join(bunch_working_dir,ram),
                                                                     os.path.join(bunch_working_dir, kernel)))
+
+@step(u'using nova-manage I register VM image "(.*?)" for owner "(.*?)" using disk "(.*?)", ram "(.*?)", kernel "(.*?)"')
+def register_all_images(step, name, owner, disk, ram, kernel):
+    step_assert(step).assert_true(utils.nova_manage.vm_image_register(name, owner, os.path.join(bunch_working_dir, kernel),
+                                                                    os.path.join(bunch_working_dir,ram),
+                                                                    os.path.join(bunch_working_dir, kernel)))
+
+@step(u'using nova-manage I register VM image "(.*?)" for owner "(.*?)" using disk "(.*?)"')
+def register_all_images(step, name, owner, disk):
+    step_assert(step).assert_true(utils.nova_manage.vm_image_register(name, owner, os.path.join(bunch_working_dir, kernel)))
 
 
 @step(u'VM image "(.*?)" is registered')
