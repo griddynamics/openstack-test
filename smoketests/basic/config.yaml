@@ -2,9 +2,9 @@ build_environment: 'master'
 yum_repository: 'openstack-rhel'
 
 cc_external_ip:
-  &cc_ip_value 127.0.0.1
+  &cc_ip_value 172.18.40.10
 
-network_interface: eth0
+network_interface: bond0
 
 
 compute_nodes:
@@ -60,7 +60,8 @@ image2:
 
 image:
   path: images/ttylinux.tar.gz
-  url: http://127.0.0.1/images/mini_image.img
+  url: http://osc-build.vm.griddynamics.net/images/mini_image.img
+#  url: http://127.0.0.1/images/mini_image.img
   disk: mini_image.img
   name: solid_mini_image
 
