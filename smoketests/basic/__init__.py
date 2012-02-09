@@ -64,11 +64,13 @@ def check_yum_repository_with_id_exists(step, id):
 
 @step(u'I install RPM package\(s\):')
 def install_rpm(step):
-    step_assert(step).assert_true(utils.rpm.install([data['PackageName'] for data in step.hashes]))
+    for data in step.hashes:
+        step_assert(step).assert_true(utils.rpm.install(data['PackageName']))
 
 @step(u'every RPM package is installed:')
 def check_rpm_installed(step):
-    step_assert(step).assert_true(utils.rpm.installed([data['PackageName'] for data in step.hashes]))
+    for data in step.hashes:
+        step_assert(step).assert_true(utils.rpm.installed(data['PackageName']))
 
 @step(u'I remove RPM package\(s\):')
 def remove_rpm(step):
