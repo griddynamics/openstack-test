@@ -1173,11 +1173,11 @@ class misc(object):
 
     @staticmethod
     def create_lvm(lvm_dev,lvm_group="nova-volumes"):
-        return bash("sudo pvcreate %s" % lvm_dev).successful() and bash("vgcreate %s %s" % (lvm_group,lvm_dev)).successful()
+        return bash("sudo pvcreate %s" % lvm_dev).successful() and bash("sudo vgcreate %s %s" % (lvm_group,lvm_dev)).successful()
 
     @staticmethod
     def delete_lvm(lvm_dev,lvm_group="nova-volumes"):
-        return bash("sudo vgremove -f %s" % lvm_group).successful() and bash("pvremove -y -ff %s" % lvm_dev).successful()
+        return bash("sudo vgremove -f %s" % lvm_group).successful() and bash("sudo pvremove -y -ff %s" % lvm_dev).successful()
 
     @staticmethod
     def check_lvm_available(lvm_dev,lvm_group="nova-volumes"):
