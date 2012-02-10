@@ -167,7 +167,7 @@ packages_to_clean:
  - python-glance
  - python-nova
  - python-novaclient
- - openstack-swift
+
 
 dep_wildcards_to_clean:
  - '*qemu*'
@@ -226,7 +226,6 @@ volume1:
 volume_packages:
  - scsi-target-utils
  - lvm2
- - util-linux-ng
 
 volume_services1:
  - tgtd
