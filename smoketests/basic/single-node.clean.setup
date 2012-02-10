@@ -2,8 +2,7 @@ Feature: Install OpenStack from scratch on clean environment
 
     Scenario: Setup yum repositories
         Given current user can execute sudo without password
-        When I setup OpenStack repository "{{yum_repository}}" for environment "{{build_environment}}"
-        And I clean yum cached data
+        When I clean yum cached data
         Then yum repository with id "{{yum_repository}}" is configured
 
 
