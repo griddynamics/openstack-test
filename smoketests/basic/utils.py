@@ -129,8 +129,8 @@ class rpm(object):
         return True
         
     @staticmethod
-    def remove(package):
-        out = bash("sudo yum -y erase '%s'" % package)
+    def remove(package_list):
+        out = bash("sudo yum -y erase '%s'" % " ".join(package_list))
         wildcards_stripped_pkg_name = package.strip('*')
         return out.output_contains_pattern("(No Match for argument)|(Removed:[\s\S]*%s.*)|(Package.*%s.*not installed)" % (wildcards_stripped_pkg_name , wildcards_stripped_pkg_name))
 
@@ -1160,27 +1160,27 @@ class misc(object):
     def delete_loop_dev(loop_dev,loop_file=""):
         if not loop_file:
             loop_file = bash("losetup %s | sed 's/.*(\(.*\)).*/\1/'" % loop_dev).output_text()[0]
-        return bash("losetup -d %s" % loop_dev).successful() and bash("rm -f %s" % loop_file).successful()
+        return bash("sudo losetup -d %s" % loop_dev).successful() and bash("rm -f %s" % loop_file).successful()
 
     @staticmethod
     def check_loop_dev_exist(loop_dev):
-        out = bash("pvscan -s | grep %s" % loop_dev).output_text()
+        out = bash("sudo pvscan -s | grep %s" % loop_dev).output_text()
         if loop_dev in out:
             return True
         return False
 
     @staticmethod
     def create_lvm(lvm_dev,lvm_group="nova-volumes"):
-        return bash("pvcreate %s" % lvm_dev).successful() and bash("vgcreate %s %s" % (lvm_group,lvm_dev)).successful()
+        return bash("sudo pvcreate %s" % lvm_dev).successful() and bash("vgcreate %s %s" % (lvm_group,lvm_dev)).successful()
 
     @staticmethod
     def delete_lvm(lvm_dev,lvm_group="nova-volumes"):
-        return bash("vgremove -f %s" % lvm_group).successful() and bash("pvremove -y -ff %s" % lvm_dev).successful()
+        return bash("sudo vgremove -f %s" % lvm_group).successful() and bash("pvremove -y -ff %s" % lvm_dev).successful()
 
     @staticmethod
     def check_lvm_available(lvm_dev,lvm_group="nova-volumes"):
-        out = bash("vgscan | grep %s" % lvm_group).output_text()
-        out1 = bash("pvscan | grep %s" % lvm_group).output_text()
+        out = bash("sudo vgscan | grep %s" % lvm_group).output_text()
+        out1 = bash("sudo pvscan | grep %s" % lvm_group).output_text()
         if lvm_group in out:
             if (lvm_dev in out1) and (lvm_group in out1):
                 return True
@@ -1303,7 +1303,7 @@ class networking(object):
 
         @staticmethod
         def get(url, destination="."):
-            return bash('wget  --directory-prefix="%s" %s' % (destination, url)).successful()
+            return bash('wget -nv --directory-prefix="%s" %s' % (destination, url)).successful()
 
         @staticmethod
         def basename(url):

@@ -64,24 +64,20 @@ def check_yum_repository_with_id_exists(step, id):
 
 @step(u'I install RPM package\(s\):')
 def install_rpm(step):
-    #for data in step.hashes:
     step_assert(step).assert_true(utils.rpm.install([data['PackageName'] for data in step.hashes]))
 
 @step(u'every RPM package is installed:')
 def check_rpm_installed(step):
-#    for data in step.hashes:
     step_assert(step).assert_true(utils.rpm.installed([data['PackageName'] for data in step.hashes]))
 
 @step(u'I remove RPM package\(s\):')
 def remove_rpm(step):
     utils.rpm.clean_all_cached_data()
-#    for data in step.hashes:
     step_assert(step).assert_true(utils.rpm.remove([data['PackageName'] for data in step.hashes]))
 
 @step(u'every RPM package is not installed:')
 def check_rpm_not_installed(step):
-#    for data in step.hashes:
-    step_assert(step).assert_false(utils.rpm.installed(data['PackageName']))
+    step_assert(step).assert_false(utils.rpm.installed([data['PackageName'] for data in step.hashes]))
 
 @step(u'I set MySQL root password to "(.*)"')
 def create_mysql_db(step, admin_pwd):
