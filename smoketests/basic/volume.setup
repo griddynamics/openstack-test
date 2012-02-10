@@ -3,6 +3,8 @@ Feature: Install, start services and create virtual disk needed to test volume
     As tester
     I want to install services
 
+
+
     Scenario: Install packages
         Given current user can execute sudo without password
         And every RPM package available:
@@ -38,6 +40,11 @@ Feature: Install, start services and create virtual disk needed to test volume
             {% for service in volume_services1 %}
             | {{ service }} |
             {% endfor %}
+
+    Scenario: Clean after privious run
+        When I remove lvm group "{{volume.group}}" on device "{{volume.source_dev}}"
+        And I remove loop device "{{volume.source_dev}}"
+
 
     Scenario: Create volume
         Given current user can execute sudo without password
