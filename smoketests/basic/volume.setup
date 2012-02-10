@@ -41,10 +41,10 @@ Feature: Install, start services and create virtual disk needed to test volume
             | {{ service }} |
             {% endfor %}
 
-    Scenario: Clean after privious run
-        When I remove lvm group "{{volume.group}}" on device "{{volume.source_dev}}"
-    Scenario: Clean after privious run
-        And I remove loop device "{{volume.source_dev}}"
+#    Scenario: Clean after privious run
+#        When I remove lvm group "{{volume.group}}" on device "{{volume.source_dev}}"
+#    Scenario: Clean after privious run
+#        And I remove loop device "{{volume.source_dev}}"
 
 
     Scenario: Create volume
