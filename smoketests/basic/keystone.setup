@@ -35,11 +35,11 @@ Feature: Setup keystone on installed OpenStack
 
         And I run commands:
             |  Command                                                         | Expected  |
-            |  sed -i 's/pipeline = versionnegotiation context apiv1app/pipeline = versionnegotiation authtoken auth-context apiv1app/' "{{glance.api_conf}}"  |  noFail  |
-            |  sed -i 's/pipeline = context registryapp/pipeline = authtoken auth-context registryapp/' "{{glance.registry_conf}}"  |  noFail  |
-            |  mv -f /etc/nova/api-paste.ini /etc/nova/api-paste.ini.wokeystone  | noFail    |
-            |  cat /etc/keystone/nova-api-paste.ini > /etc/nova/api-paste.ini  | noFail    |
-            |  sed -i 's/999888777666/"{{keystone.token}}"/' "{{nova.api_conf}}"  |  noFail  |
+            |  sudo sed -i 's/pipeline = versionnegotiation context apiv1app/pipeline = versionnegotiation authtoken auth-context apiv1app/' "{{glance.api_conf}}"  |  noFail  |
+            |  sudo sed -i 's/pipeline = context registryapp/pipeline = authtoken auth-context registryapp/' "{{glance.registry_conf}}"  |  noFail  |
+            |  sudo mv -f /etc/nova/api-paste.ini /etc/nova/api-paste.ini.wokeystone  | noFail    |
+            |  sudo cat /etc/keystone/nova-api-paste.ini > /etc/nova/api-paste.ini  | noFail    |
+            |  sudo sed -i 's/999888777666/"{{keystone.token}}"/' "{{nova.api_conf}}"  |  noFail  |
 
         And I init keystone db for IP "{{keystone.cc}}", admin "{{keystone.admin}}", password "{{keystone.admin_password}}", project "{{keystone.tenant}}", token "{{keystone.token}}", region "{{keystone.region}}"
 

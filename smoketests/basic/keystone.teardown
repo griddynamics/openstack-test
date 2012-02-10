@@ -21,12 +21,12 @@ Feature: Remove keystone
             | keystone |
         And I run commands:
             |  Command                                                         | Expected  |
-            |  sed -i 's/pipeline = versionnegotiation authtoken auth-context apiv1app/pipeline = versionnegotiation context apiv1app/' "{{glance.api_conf}}"  |  noFail  |
-            |  sed -i 's/pipeline = authtoken auth-context registryapp/pipeline = context registryapp/' "{{glance.registry_conf}}"  |  noFail  |
-            |  mv -f /etc/nova/api-paste.ini /etc/nova/api-paste.ini.wkeystone  | noFail    |
-            |  cp -f /etc/nova/api-paste.ini.wokeystone /etc/nova/api-paste.ini  | noFail    |
-            |  rm -f /var/lib/keystone/keystone.db  | noFail    |
-            |  rm -rf /etc/keystone     | noFail    |
+            |  sudo sed -i 's/pipeline = versionnegotiation authtoken auth-context apiv1app/pipeline = versionnegotiation context apiv1app/' "{{glance.api_conf}}"  |  noFail  |
+            |  sudo sed -i 's/pipeline = authtoken auth-context registryapp/pipeline = context registryapp/' "{{glance.registry_conf}}"  |  noFail  |
+            |  sudo mv -f /etc/nova/api-paste.ini /etc/nova/api-paste.ini.wkeystone  | noFail    |
+            |  sudo cp -f /etc/nova/api-paste.ini.wokeystone /etc/nova/api-paste.ini  | noFail    |
+            |  sudo rm -f /var/lib/keystone/keystone.db  | noFail    |
+            |  sudo rm -rf /etc/keystone     | noFail    |
 
         And I restart services:
             | ServiceName   |
