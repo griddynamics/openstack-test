@@ -113,7 +113,7 @@ class rpm(object):
 
     @staticmethod
     def available(package_list):
-        out = bash("sudo yum list")
+        out = bash("sudo yum list %s" % " ".join(package_list))
         if not out.successful():
             return False
         lines = out.output_text().split("\n")
