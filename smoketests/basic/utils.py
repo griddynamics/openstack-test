@@ -1156,12 +1156,12 @@ class misc(object):
 
     @staticmethod
     def create_loop_dev(loop_dev,loop_file,loop_size):
-        return bash("dd if=/dev/zero of=%s bs=1024 count=%s" % (loop_file, int(loop_size)*1024*1024)).successful() and bash("losetup %s %s" % (loop_dev,loop_file)).successful()
+        return bash("dd if=/dev/zero of=%s bs=1024 count=%s" % (loop_file, int(loop_size)*1024*1024)).successful() and bash("sudo losetup %s %s" % (loop_dev,loop_file)).successful()
 
     @staticmethod
     def delete_loop_dev(loop_dev,loop_file=""):
         if not loop_file:
-            loop_file = bash("losetup %s | sed 's/.*(\(.*\)).*/\1/'" % loop_dev).output_text()[0]
+            loop_file = bash("sudo losetup %s | sed 's/.*(\(.*\)).*/\1/'" % loop_dev).output_text()[0]
         return bash("sudo losetup -d %s" % loop_dev).successful() and bash("rm -f %s" % loop_file).successful()
 
     @staticmethod
