@@ -127,7 +127,7 @@ test_prepequisites:
  - nmap
  - pexpect
  - nova2ools
- - util-linux-ng
+
 
 packages_to_install:
  - libvirt
@@ -226,6 +226,7 @@ volume1:
 volume_packages:
  - scsi-target-utils
  - lvm2
+ - util-linux-ng
 
 volume_services1:
  - tgtd

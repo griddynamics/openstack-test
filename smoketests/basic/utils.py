@@ -131,8 +131,10 @@ class rpm(object):
     @staticmethod
     def remove(package_list):
         out = bash("sudo yum -y erase '%s'" % " ".join(package_list))
-        wildcards_stripped_pkg_name = package.strip('*')
-        return out.output_contains_pattern("(No Match for argument)|(Removed:[\s\S]*%s.*)|(Package.*%s.*not installed)" % (wildcards_stripped_pkg_name , wildcards_stripped_pkg_name))
+#        wildcards_stripped_pkg_name = package.strip('*')
+        wildcards_stripped_pkg_name = " ".join(package_list)
+#        return out.output_contains_pattern("(No Match for argument)|(Removed:[\s\S]*%s.*)|(Package.*%s.*not installed)" % (wildcards_stripped_pkg_name , wildcards_stripped_pkg_name))
+        return out.successful()
 
     @staticmethod
     def yum_repo_exists(id):
