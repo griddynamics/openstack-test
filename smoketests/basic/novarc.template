@@ -1,0 +1,14 @@
+export OS_AUTH_URL="%(auth_url)s"
+# do not export OS_TENANT_ID
+export OS_TENANT_NAME="%(tenant_name)s"
+export OS_USERNAME="%(username)s"
+export OS_PASSWORD="%(password)s"
+export OS_AUTH_USER=$OS_USERNAME
+export OS_AUTH_KEY=$OS_PASSWORD
+export OS_AUTH_TENANT=$OS_TENANT_NAME
+export OS_AUTH_STRATEGY=keystone
+export NOVA_API_KEY=$OS_PASSWORD
+export NOVA_USERNAME=$OS_USERNAME
+export NOVA_PROJECT_ID=$OS_TENANT_NAME
+export NOVA_URL=$OS_AUTH_URL
+export NOVA_VERSION="1.1"
