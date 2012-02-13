@@ -71,6 +71,7 @@ vm:
   name: "rhelinstance1"
   boot_timeout: 180
   ping_deadline: 90
+  ssh_deadline: 90
   keypair:
     name: test_key
     private: id_rsa_generated
@@ -82,10 +83,12 @@ vm2:
   name: "rhelinstance2"
   boot_timeout: 180
   ping_deadline: 90
+  ssh_deadline: 90
   keypair:
     name: test_key
     private: id_rsa_generated
     public:  id_rsa_generated.pub
+
 
 vm3:
   user: root
@@ -93,6 +96,7 @@ vm3:
   name: "rhelinstance3"
   boot_timeout: 180
   ping_deadline: 90
+  ssh_deadline: 90
   keypair:
     name: test_key
     private: id_rsa_generated
