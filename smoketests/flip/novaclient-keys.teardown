@@ -1,0 +1,10 @@
+Feature: Deregister SSH keys using  python-novaclient CLI
+    In order to have access to VM instances
+    As tester
+    I want to deregister SSH keys via python-novaclient CLI tools
+
+    Scenario: Deregister existing keypair
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And keypair with name "{{vm.keypair.name}}" exists
+        When I remove keypair with name "{{vm.keypair.name}}"
+        Then I see keypair "{{vm.keypair.name}}" does not exists
