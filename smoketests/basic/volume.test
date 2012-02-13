@@ -84,10 +84,6 @@ Feature: Install, start services and create virtual disk needed to test volume
 #    As tester
 #    I want to start instance, create volume and test it can be used within instance
 
-
-    Scenario: Setup prerequisites
-        Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys"
-
     Scenario: Start instance
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM image "{{image.name}}" is registered

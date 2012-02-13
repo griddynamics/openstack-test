@@ -40,9 +40,6 @@ Feature: Change nova config to enable security groups
 #    As tester
 #    I want to start 3 instances in different security groups. Then allow traffic between 2 of them and check that allowed and disallowed traffic works as it should.
 
-#    Scenario: Setup prerequisites
-#        Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys"
-
 
     Scenario: Register existing keypair from file
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available

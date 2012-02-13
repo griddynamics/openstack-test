@@ -63,10 +63,6 @@ Feature: Setup keystone on installed OpenStack
 #    As root
 #    I want to create user, tenant, endpoints in keystone
 
-#    Scenario: Setup prerequisites
-#        Require setup "single-node ! keystone ! novaclient-network ! novaclient-images ! novaclient-keys"
-#        Require setup "novaclient-images"
-
     Scenario: Check user creating using keystone
         Given every service is running:
             | ServiceName   |

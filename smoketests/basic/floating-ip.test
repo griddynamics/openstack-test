@@ -1,16 +1,18 @@
-#Feature: Add pool of external IP's
-#    In order to have test floating IP feature
-#    As tester
-#    I want to Add pool of external IP's using nova-manage
+Feature: Add pool of external IP's
+    In order to have test floating IP feature
+    As tester
+    I want to Add pool of external IP's using nova-manage
 
 
     Scenario: Register pool of external IPs
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         When I add pool of external IP addresses "{{network.external.cidr}}"
-        Then I see pool of external IP addresses "{{network.external.cidr}}" existFeature: Allocate external IP and associate with instance,
-    In order to test floating IP feature
-    As tester
-    I want to associate external IP with instance
+        Then I see pool of external IP addresses "{{network.external.cidr}}" exist
+
+#Feature: Allocate external IP and associate with instance,
+#    In order to test floating IP feature
+#    As tester
+#    I want to associate external IP with instance
 
 
     Scenario: Allocate external IP
