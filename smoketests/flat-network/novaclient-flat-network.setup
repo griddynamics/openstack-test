@@ -1,0 +1,40 @@
+Feature: Change flags in nova.conf to test Flat Networking
+
+    Scenario: Configure OpenStack compute
+        Given every RPM package is installed:
+            | PackageName   |
+            {% for package in packages_to_install %}
+            | {{ package }} |
+            {% endfor %}
+        When I change flag file "{{nova.conf_file}}" by setting flag values:
+            | Name                      | Value                                         |
+            | --network_manager         | nova.network.manager.FlatManager              |
+            | --flat_network            | true                                          |
+            | --flat_injected           | true                                          |
+            | --fixed_range             | "{{network.cidr}}"                            |
+
+         Then the following flags in file "{{nova.conf_file}}" are set to:
+            | Name                      | Value                                         |
+            | --network_manager         | nova.network.manager.FlatManager              |
+            | --flat_network            | true                                          |
+            | --flat_injected           | true                                          |
+            | --fixed_range             | "{{network.cidr}}"                            |
+
+
+    Scenario: Restart OpenStack services
+        Given every service is running:
+            | ServiceName   |
+            {% for service in supplementary_services %}
+            | {{ service }} |
+            {% endfor %}
+        When I restart services:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+        Then every service is running:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+
