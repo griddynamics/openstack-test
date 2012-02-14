@@ -43,8 +43,8 @@ Feature: Change flags in nova.conf to test Flat Networking
 #    As tester
 #    I want to register start instance and verify it is up and available via SSH
 
-    Scenario: Setup prerequisites
-        Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys"
+#    Scenario: Setup prerequisites
+#        Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys"
 
     Scenario: Start single instance and bind with pre-uploaded keypair
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
