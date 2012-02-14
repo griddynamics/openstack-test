@@ -39,9 +39,16 @@ class command_output(object):
         return len(self.output) > 1 and len(self.output[1]) > 0
 
 class bash(command_output):
+    last_error_code = 0
+
+    @classmethod
+    def get_last_error_code(cls):
+        return cls.last_error_code
+
     def __init__(self, cmdline):
         output = self.__execute(cmdline)
         super(bash,self).__init__(output)
+        bash.last_error_code = self.output[0]
 
     def __execute(self, cmd):
         retcode = commands.getstatusoutput(cmd)
@@ -421,7 +428,7 @@ class nova_cli(object):
     def start_vm_instance(name, image_id, flavor_id, key_name=None):
         key_name_arg = "" if key_name is None else "--key_name %s" % key_name
         text = nova_cli.get_novaclient_command_out("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
-        if text:
+        if text and bash.get_last_error_code() == 0:
             table = ascii_table(text)
             instance_id = table.select_values('Value', 'Property', 'id')
             if instance_id:
@@ -434,7 +441,7 @@ class nova_cli(object):
     def start_vm_instance_return_output(name, image_id, flavor_id, key_name=None):
         key_name_arg = "" if key_name is None else "--key_name %s" % key_name
         text =  nova_cli.get_novaclient_command_out("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
-        if text:
+        if text and bash.get_last_error_code() == 0:
             table = ascii_table(text)
             instance_id = table.select_values('Value', 'Property', 'id')
             if instance_id:

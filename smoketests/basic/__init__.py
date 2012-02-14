@@ -288,6 +288,7 @@ def start_vm_instance_same_name(step, name,image, flavor):
     flavor_id = id_flavor_list[0]
     assert_true(image_id != '', image_id)
     assert_true(flavor_id != '', flavor_id)
+    #"Instance with such name alredy exist in the project "
     step_assert(step).assert_false(utils.nova_cli.start_vm_instance(name, image_id, flavor_id))
 
 @step(u'I start VM instance "(.*?)" using image "(.*?)",  flavor "(.*?)" and save auto-generated password')
@@ -317,7 +318,7 @@ def wait_instance_comes_up_within(step, name, timeout):
     step_assert(step).assert_true(utils.nova_cli.wait_instance_comes_up(name, int(timeout)))
 
 @step(u'VM instance "(.*?)" is pingable within "(.*?)" seconds')
-@onfailure(utils.debug.save.nova_conf)
+@onfailure(utils.debug.save.nova_conf, utils.debug.save.command_output('sudo ifconfig -a', 'diag_command.log'), utils.debug.save.command_output('sudo brctl show', 'diag_command.log'))
 def vm_is_pingable(step, name, timeout):
     ip = utils.nova_cli.get_instance_ip(name)
     assert_true(ip != '', name)

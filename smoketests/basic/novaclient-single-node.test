@@ -32,8 +32,8 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM image "{{image.name}}" is registered
         When I change flag file "{{nova.conf_file}}" by setting flag values:
-                                      |     Name           | Value |
-                                      | project_uniq_names | true  |
+                                      |     Name             | Value |
+                                      | --project_uniq_names | true  |
         And I stop services:
                                       |     ServiceName    |
                                       {% for service in openstack_services %}
@@ -51,8 +51,8 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM image "{{image.name}}" is registered
         When I change flag file "{{nova.conf_file}}" by setting flag values:
-                                      |     Name           | Value |
-                                      | project_uniq_names | false |
+                                      |     Name             | Value |
+                                      | --project_uniq_names | false |
         And I stop services:
                                       |     ServiceName    |
                                       {% for service in openstack_services %}
