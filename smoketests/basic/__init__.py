@@ -1,6 +1,7 @@
 from lettuce import step, world
 from nose.tools import assert_equals, assert_true, assert_false
 import utils
+from utils import onfailure
 import os
 import bunch.special
 import conf
@@ -277,7 +278,8 @@ def start_vm_instance_no_keypair(step, name,image, flavor):
     step_assert(step).assert_true(utils.nova_cli.start_vm_instance(name, image_id, flavor_id))
 
 @step(u'I can not start VM instance "(.*?)" using image "(.*?)", flavor "(.*?)"')
-def start_vm_instance(step, name,image, flavor):
+@onfailure(utils.debug.save.nova_conf)
+def start_vm_instance_same_name(step, name,image, flavor):
     id_image_list = utils.nova_cli.get_image_id_list(image)
     assert_equals(len(id_image_list), 1, "There are %s images with name %s: %s" % (len(id_image_list), name, str(id_image_list)))
     id_flavor_list = utils.nova_cli.get_flavor_id_list(flavor)
@@ -315,6 +317,7 @@ def wait_instance_comes_up_within(step, name, timeout):
     step_assert(step).assert_true(utils.nova_cli.wait_instance_comes_up(name, int(timeout)))
 
 @step(u'VM instance "(.*?)" is pingable within "(.*?)" seconds')
+@onfailure(utils.debug.save.nova_conf)
 def vm_is_pingable(step, name, timeout):
     ip = utils.nova_cli.get_instance_ip(name)
     assert_true(ip != '', name)

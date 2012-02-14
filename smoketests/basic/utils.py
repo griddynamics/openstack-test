@@ -707,6 +707,46 @@ class networking(object):
             def show(param_string):
                 return bash('sudo ip addr show %s' % param_string)
 
+#decorator for performing action on step failure
+def onfailure(*triggers):
+    def decorate(fcn):
+        def wrap(*args, **kwargs):
+            try:
+                retval = fcn(*args, **kwargs)
+            except AssertionError as e:
+                for trigger in triggers:
+                    trigger()
+                raise e
+            return retval
+        return wrap
+
+    return decorate
+
+
+class debug(object):
+    @staticmethod
+    def current_bunch_path():
+        global __file__
+        return conf.get_current_module_path(__file__)
+
+    class save(object):
+        @staticmethod
+        def file(src, dst):
+            def saving_function():
+                bash("sudo dd if={src} of={dst}".format(src=src,dst=dst))
+            return saving_function
+
+        @staticmethod
+        def command_output(command, file_to_save):
+            def command_output_function():
+                conf.log(file_to_save, bash(command).output_text())
+            return command_output_function
+
+        @staticmethod
+        def nova_conf():
+            debug.save.file('/etc/nova/nova.conf', os.path.join(debug.current_bunch_path(), 'nova.conf.log'))()
+
+
 
 
         
