@@ -31,9 +31,9 @@ project:
   name: &tenant project1
 
 network:
-  cidr: 10.1.1.0/24
+  cidr: 172.30.252.0/24
   nets: 1
-  ips:  200
+  ips:  254
   &cc: 10.1.1.1
   external:
     cidr: 10.101.101.0/28
@@ -64,6 +64,17 @@ image:
   disk: mini_image.img
   name: solid_mini_image
 
+flat_network:
+  cidr: 172.30.253.0/24
+  nets: 1
+  ips:  254
+  label: flat
+  bridge:
+    name: br_flat
+    addr: 172.30.253.1
+    netmask: 255.255.255.0
+
+
 vm:
   user: root
   flavor: m1.small
@@ -88,6 +99,12 @@ vm2:
     private: id_rsa_generated
     public:  id_rsa_generated.pub
 
+vm3:
+  user: root
+  flavor: m1.tiny
+  name: "singlethone"
+  boot_timeout: 60
+  ping_deadline: 30
 
 vm3:
   user: root

@@ -1,48 +1,6 @@
-Feature: Change flags in nova.conf to default values
+Feature: Perform clean up after Flat Network test
 
-    Scenario: Configure OpenStack compute
-         Given the following flags in file "{{nova.conf_file}}" are set to:
-            | Name                      | Value                                         |
-            | --network_manager         | nova.network.manager.FlatManager              |
-         When I change flag file "{{nova.conf_file}}" by setting flag values:
-            | Name                      | Value                                         |
-            | --network_manager         | nova.network.manager.VlanManager              |
-         Then the following flags in file "{{nova.conf_file}}" are set to:
-            | Name                      | Value                                         |
-            | --network_manager         | nova.network.manager.VlanManager              |
-
-    Scenario: Remove flags
-         Given the following flags in file "{{nova.conf_file}}" are set to:
-            | Name                      | Value                                         |
-            | --flat_network            | true                                          |
-            | --flat_injected           | true                                          |
-            | --fixed_range             | "{{network.cidr}}"                            |
-         When I change flag file "{{nova.conf_file}}" by removing flag values:
-            | Name                      |
-            | --flat_network            |
-            | --flat_injected           |
-            | --fixed_range             |
-         Then the following flags are not in "{{nova.conf_file}}":
-            | Name                      |
-            | --flat_network            |
-            | --flat_injected           |
-            | --fixed_range             |
-
-
-    Scenario: Restart OpenStack services
-        Given every service is running:
-            | ServiceName   |
-            {% for service in supplementary_services %}
-            | {{ service }} |
-            {% endfor %}
-        When I restart services:
-            | ServiceName   |
-            {% for service in openstack_services %}
-            | {{ service }} |
-            {% endfor %}
-        Then every service is running:
-            | ServiceName   |
-            {% for service in openstack_services %}
-            | {{ service }} |
-            {% endfor %}
-
+    Scenario: Delete bridge interface created by Flat Network setup
+        Given interface "{{flat_network.bridge.name}}" exists
+        When I delete bridge "{{flat_network.bridge.name}}"
+        Then interface does not "{{flat_network.bridge.name}}" exist
