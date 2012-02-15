@@ -2,8 +2,7 @@ build_environment: 'master'
 yum_repository: 'openstack-rhel'
 
 cc_external_ip:
-#  &cc_ip_value 172.18.40.10
-  &cc_ip_value 127.0.0.1
+  &cc_ip_value 172.18.40.10
 
 network_interface: bond0
 
@@ -32,10 +31,10 @@ project:
   name: &tenant project1
 
 network:
-  cidr: 172.30.252.0/22
+  cidr: 10.1.1.0/24
   nets: 1
-  ips:  1024
-  &cc: 172.30.252.1
+  ips:  200
+  &cc: 10.1.1.1
   external:
     cidr: 10.101.101.0/28
 
@@ -53,7 +52,7 @@ glance:
 
 image2:
   path: images/mini_image.tar.gz
-  url: http://127.0.0.1/images/mini_image.tar.gz
+  url: http://osc-build.vm.griddynamics.net/images/mini_image.tar.gz
   disk: root_fs.raw
   ram: initramfs-3.2.1.img
   kernel: vmlinuz-3.2.1-auto
@@ -61,8 +60,7 @@ image2:
 
 image:
   path: images/ttylinux.tar.gz
-#  url: http://osc-build.vm.griddynamics.net/images/mini_image.img
-  url: http://127.0.0.1/images/mini_image.img
+  url: http://osc-build.vm.griddynamics.net/images/mini_image.img
   disk: mini_image.img
   name: solid_mini_image
 
@@ -114,7 +112,7 @@ openstack_services:
 
 supplementary_services:
  - messagebus
-# - rabbitmq-server
+ - rabbitmq-server
  - mysqld
  - libvirtd
 
@@ -214,7 +212,7 @@ volume:
   source_dev_size: 4
   group: nova-volumes
   name:   vol
-  dev:   '/dev/vdb'
+  dev:   '/dev/vdc'
   size: 1
   zone: nova
   timeout: 60
@@ -223,7 +221,7 @@ volume:
 
 volume1:
   name:   vol1
-  dev:   '/dev/vdc'
+  dev:   '/dev/vdd'
   size: 1
   zone: nova
   timeout: 60
