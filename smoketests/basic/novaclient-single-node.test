@@ -57,7 +57,7 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
                                       | {{service}}        |
                                       {% endfor %}
         And I start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
-        Then I can not start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
+#        Then I can not start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
 
     Scenario: Start multiple instances with same name when unique instance names disabled
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
