@@ -979,7 +979,7 @@ class euca_cli(object):
         return out.successful()
 
     @staticmethod
-    @wait()
+    @wait(120)
     def volume_attached_to_instance(volume_name, instance_name):
         volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
         instance_id='i-'+misc.get_euca_id(nova_id=world.instances[instance_name])

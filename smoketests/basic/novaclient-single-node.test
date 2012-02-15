@@ -30,3 +30,11 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
         And I see that "ssh" port of VM instance "{{vm2.name}}" is open and serves "ssh" protocol within "{{vm2.ssh_deadline}}" seconds
 #        And I can log into VM "{{vm2.name}}" via SSH as "{{vm2.user}}" using saved password
 
+
+    Scenario: Stop instances
+        Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        And VM instance "{{vm2.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        When I stop VM instance "{{vm.name}}"
+        And I stop VM instance "{{vm2.name}}"
+        Then VM instance "{{vm.name}}" is stopped within "{{vm.boot_timeout}}" seconds
+        And VM instance "{{vm2.name}}" is stopped within "{{vm.boot_timeout}}" seconds
