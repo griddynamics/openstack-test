@@ -1,6 +1,6 @@
 Feature: Perform clean up after Flat Network test
 
-    Scenario: Delete bridge interface
+    Scenario: Delete bridge interface created by Flat Network setup
         Given interface "{{flat_network.bridge.name}}" exists
         When I delete bridge "{{flat_network.bridge.name}}"
         Then interface does not "{{flat_network.bridge.name}}" exist

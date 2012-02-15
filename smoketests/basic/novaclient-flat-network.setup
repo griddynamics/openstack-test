@@ -6,14 +6,3 @@ Feature: Do preparations to test Flat Networking
         And I add interface "{{network_interface}}" to the bridge "{{flat_network.bridge.name}}"
         And I configure interface "{{flat_network.bridge.name}}" assigning address "{{flat_network.bridge.addr}}" and netmask "{{flat_network.bridge.netmask}}"
         Then interface "{{flat_network.bridge.name}}" has address "{{flat_network.bridge.addr}}"
-
-    Scenario: Create network for Flat Networking
-        Given nova project "{{project.name}}" exists
-        When I create nova network with the following parameters:
-            | Parameter              | Value                       |
-            | --bridge               | {{flat_network.bridge}}     |
-            | --fixed_range_v4       | {{flat_network.cidr}}       |
-            | --network_size         | {{flat_network.ips}}        |
-            | --num_networks         | {{flat_network.nets}}       |
-            | --label                | {{flat_network.label}}      |
-        Then nova network "{{flat_network.cidr}}" exists

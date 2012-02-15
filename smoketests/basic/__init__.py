@@ -325,7 +325,7 @@ def wait_instance_comes_up_within(step, name, timeout):
     utils.debug.save.command_output('sudo brctl show', 'diag_command.log'))
 def vm_is_pingable(step, name, timeout):
     ip = utils.nova_cli.get_instance_ip(name)
-    assert_true(ip != '', name)
+    assert_true(ip != '', "Instance %s has no IP address" % name)
     step_assert(step).assert_true(utils.networking.icmp.probe(ip, int(timeout)))
 
 @step(u'I see that "(.*?)" port of VM instance "(.*?)" is open and serves "(.*?)" protocol within "(.*?)" seconds')

@@ -1,4 +1,4 @@
-Feature: Start instance(s) in single node deployment using  python-novaclient CLI
+Feature: Start instance(s) in single node deployment using  python-novaclient CLI for Flat Network setup
     In order to smoke test OpenStack build
     As tester
     I want to register start instance and verify it is up and available via SSH
@@ -29,7 +29,7 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
                 | --fixed_range             | "{{flat_network.cidr}}"                       |
 
 
-        Scenario: Restart OpenStack services
+        Scenario: Restart OpenStack services for Flat Network setup
             Given every service is running:
                 | ServiceName   |
                 {% for service in supplementary_services %}
@@ -46,8 +46,20 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
                 | {{ service }} |
                 {% endfor %}
 
+
+    Scenario: Create network for Flat Networking
+        Given nova project "{{project.name}}" exists
+        When I create nova network with the following parameters:
+            | Parameter              | Value                       |
+            | --bridge               | {{flat_network.bridge.name}}     |
+            | --fixed_range_v4       | {{flat_network.cidr}}       |
+            | --network_size         | {{flat_network.ips}}        |
+            | --num_networks         | {{flat_network.nets}}       |
+            | --label                | {{flat_network.label}}      |
+        Then nova network "{{flat_network.cidr}}" exists
+
     #Test part
-    Scenario: Start single instance and bind with pre-uploaded keypair
+    Scenario: Start single instance and bind with pre-uploaded keypair for Flat Network setup
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM image "{{image.name}}" is registered
         And keypair with name "{{vm.keypair.name}}" exists
@@ -70,7 +82,7 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
                 | Name                      | Value                                         |
                 | --network_manager         | nova.network.manager.VlanManager              |
 
-    Scenario: Remove flags
+    Scenario: Remove flags of Flat Network setup
          Given the following flags in file "{{nova.conf_file}}" are set to:
             | Name                      | Value                                         |
             | --flat_network            | true                                          |
@@ -88,7 +100,7 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
             | --fixed_range             |
 
 
-    Scenario: Restart OpenStack services
+    Scenario: Restart OpenStack services for Flat Network setup
         Given every service is running:
             | ServiceName   |
             {% for service in supplementary_services %}

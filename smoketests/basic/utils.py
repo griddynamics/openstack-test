@@ -200,7 +200,7 @@ class service(object):
     def __init__(self, name):
         self.__name = name
         self.__unusual_running_patterns = {'rabbitmq-server': '(Node.*running)|(running_applications)'}
-        self.__unusual_stopped_patterns = {'rabbitmq-server': 'no.nodes.running|no_nodes_running|nodedown'}
+        self.__unusual_stopped_patterns = {'rabbitmq-server': 'no.nodes.running|no_nodes_running|nodedown|unrecognized'}
         self.__exec_by_expect = set(['rabbitmq-server'])
 
     def __exec_cmd(self, cmd):
@@ -720,7 +720,7 @@ def onfailure(*triggers):
         def wrap(*args, **kwargs):
             try:
                 retval = fcn(*args, **kwargs)
-            except AssertionError as e:
+            except:
                 for trigger in triggers:
                     trigger()
                 raise
@@ -746,7 +746,8 @@ class debug(object):
         @staticmethod
         def command_output(command, file_to_save):
             def command_output_function():
-                conf.log(file_to_save, bash(command).output_text())
+                dst = os.path.join(debug.current_bunch_path(),file_to_save)
+                conf.log(dst, bash(command).output_text())
             return command_output_function
 
         @staticmethod
@@ -758,7 +759,7 @@ class debug(object):
             src = logfile if os.path.isabs(logfile) else os.path.join('/var/log', logfile)
             dst = os.path.basename(src)
             dst = os.path.join(debug.current_bunch_path(), dst if os.path.splitext(dst)[1] == '.log' else dst + ".log")
-            debug.save.file(src, dst)()
+            return debug.save.file(src, dst)
 
 
 
