@@ -723,7 +723,7 @@ def onfailure(*triggers):
             except AssertionError as e:
                 for trigger in triggers:
                     trigger()
-                raise e
+                raise
             return retval
         return wrap
 
@@ -752,6 +752,15 @@ class debug(object):
         @staticmethod
         def nova_conf():
             debug.save.file('/etc/nova/nova.conf', os.path.join(debug.current_bunch_path(), 'nova.conf.log'))()
+
+        @staticmethod
+        def log(logfile):
+            src = logfile if os.path.isabs(logfile) else os.path.join('/var/log', logfile)
+            dst = os.path.basename(src)
+            dst = os.path.join(debug.current_bunch_path(), dst if os.path.splitext(dst)[1] == '.log' else dst + ".log")
+            debug.save.file(src, dst)()
+
+
 
 
 

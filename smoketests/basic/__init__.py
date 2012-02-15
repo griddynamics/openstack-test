@@ -318,7 +318,11 @@ def wait_instance_comes_up_within(step, name, timeout):
     step_assert(step).assert_true(utils.nova_cli.wait_instance_comes_up(name, int(timeout)))
 
 @step(u'VM instance "(.*?)" is pingable within "(.*?)" seconds')
-@onfailure(utils.debug.save.nova_conf, utils.debug.save.command_output('sudo ifconfig -a', 'diag_command.log'), utils.debug.save.command_output('sudo brctl show', 'diag_command.log'))
+@onfailure(utils.debug.save.nova_conf,
+    utils.debug.save.log('nova/nova-compute.log'),
+    utils.debug.save.log('nova/nova-network.log'),
+    utils.debug.save.command_output('sudo ifconfig -a', 'diag_command.log'),
+    utils.debug.save.command_output('sudo brctl show', 'diag_command.log'))
 def vm_is_pingable(step, name, timeout):
     ip = utils.nova_cli.get_instance_ip(name)
     assert_true(ip != '', name)
