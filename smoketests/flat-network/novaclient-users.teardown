@@ -1,0 +1,16 @@
+Feature: Delete user and project using python-novaclient CLI
+    In order to clean environment
+    As cloud admin
+    I want to delete user and project
+
+    Scenario: Delete project
+        Given nova user "{{user.name}}" exists
+        And nova project "{{project.name}}" exists
+        When I remove nova project "{{project.name}}"
+        Then nova project "{{project.name}}" does not exists
+
+    Scenario: Delete admin user
+        Given nova user "{{user.name}}" exists
+        When I remove nova admin user "{{user.name}}"
+        Then nova user "{{user.name}}" does not exists
+

@@ -16,6 +16,9 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
         And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
         And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol within "{{vm.ssh_deadline}}" seconds
         And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}"
+        And I login to VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}" and run commands:
+            |  Command  |   Expected  |
+            |   whoami  |   root      |
 
 
     Scenario: Start single instance and login with auto-generated root password
