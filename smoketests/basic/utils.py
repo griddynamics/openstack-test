@@ -97,6 +97,7 @@ class bash(command_output):
 #        print "cmd: %s" % cmd
 #        print "sta: %s" % status
 #        print "out: %s" % text
+
         return retcode
 
 
@@ -137,7 +138,7 @@ class rpm(object):
         
     @staticmethod
     def remove(package_list):
-        out = bash("sudo yum -y erase '%s'" % " ".join(package_list))
+        out = bash("sudo yum -y erase %s" % " ".join(package_list))
 #        wildcards_stripped_pkg_name = package.strip('*')
         wildcards_stripped_pkg_name = " ".join(package_list)
 #        return out.output_contains_pattern("(No Match for argument)|(Removed:[\s\S]*%s.*)|(Package.*%s.*not installed)" % (wildcards_stripped_pkg_name , wildcards_stripped_pkg_name))
@@ -920,7 +921,7 @@ class euca_cli(object):
                 params['port-range']=port
 
         if source_subnet:
-            if source_subnet in ('', None):
+            if source_subnet in ('', None, '0', 'any'):
                 params['source-subnet']='0.0.0.0/0'
             else:
                 params['source-subnet']=source_subnet
@@ -1035,7 +1036,7 @@ class euca_cli(object):
 
     @staticmethod
     def sgroup_check(group_name):
-        out = bash("%s && euca-describe-groups %s |awk '{print $3}'" % (nova_cli.get_novarc_load_cmd(),group_name)).output_text()
+        out = bash("%s && euca-describe-groups %s |grep GROUP |awk '{print $3}'" % (nova_cli.get_novarc_load_cmd(),group_name)).output_text()
         if group_name in out:
             return True
         return False
@@ -1089,6 +1090,7 @@ class euca_cli(object):
             euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto='udp', src_host='', dst_port='1-65536') and \
             euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto='icmp', src_host='', dst_port='-1'):
                 return True
+            print "in if"
         return euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto, src_host, dst_port)
 
 
@@ -1178,7 +1180,8 @@ class misc(object):
     def delete_loop_dev(loop_dev,loop_file=""):
         if not loop_file:
             loop_file = bash("sudo losetup %s | sed 's/.*(\(.*\)).*/\1/'" % loop_dev).output_text()[0]
-        return bash("sudo losetup -d %s" % loop_dev).successful() and bash("rm -f %s" % loop_file).successful()
+        return bash("sudo losetup -d %s" % loop_dev).successful() 
+        # and bash("rm -f %s" % loop_file).successful()
 
     @staticmethod
     def check_loop_dev_exist(loop_dev):
