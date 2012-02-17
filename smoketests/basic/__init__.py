@@ -407,6 +407,8 @@ def check_port_protocol(step, port, name, protocol, timeout):
 
 
 @step(u'I can log into VM "(.*?)" via SSH as "(.*?)" with key "(.*?)"')
+@onfailure(utils.debug.save.nova_conf,
+    utils.debug.save.log('nova/nova-compute.log'))
 def check_can_log_via_ssh_with_external_key(step, name, user, key):
     ip = utils.nova_cli.get_instance_ip(name)
     assert_true(ip != '', name)
@@ -414,6 +416,8 @@ def check_can_log_via_ssh_with_external_key(step, name, user, key):
     step_assert(step).assert_true(utils.ssh(ip, command="exit", user=user, key=key_path).successful())
 
 @step(u'I can log into VM "(.*?)" via SSH as "(\w*?)" using saved password')
+@onfailure(utils.debug.save.nova_conf,
+    utils.debug.save.log('nova/nova-compute.log'))
 def check_can_log_via_ssh_using_saved_pwd(step, name, user):
     ip = utils.nova_cli.get_instance_ip(name)
     assert_true(ip != '', name)
