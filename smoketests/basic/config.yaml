@@ -34,7 +34,7 @@ network:
   cidr: 172.30.252.0/24
   nets: 1
   ips:  254
-  &cc: 10.1.1.1
+  cc: 10.1.1.1
   external:
     cidr: 10.101.101.0/28
 
