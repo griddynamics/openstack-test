@@ -52,11 +52,11 @@ glance:
 
 image2:
   path: images/mini_image.tar.gz
-  url: http://osc-build.vm.griddynamics.net/images/mini_image.tar.gz
+  url: http://osc-build.vm.griddynamics.net/images/rhel_image.tar.gz
   disk: root_fs.raw
-  ram: initramfs-3.2.1.img
-  kernel: vmlinuz-3.2.1-auto
-  name: mini_image
+  ram: initramfs-2.6.32-131.0.15.el6.x86_64.img
+  kernel: vmlinuz-2.6.32-131.0.15.el6.x86_64
+  name: rhel_image
 
 image:
   path: images/ttylinux.tar.gz
