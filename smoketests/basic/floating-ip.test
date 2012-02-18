@@ -6,8 +6,8 @@ Feature: Add pool of external IP's
 
     Scenario: Register pool of external IPs
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        When I add pool of external IP addresses "{{cc_external_ip.network}}"
-        Then I see pool of external IP addresses "{{cc_external_ip.network}}" exist
+        When I add pool of external IP addresses "{{cc_external_network}}"
+        Then I see pool of external IP addresses "{{cc_external_network}}" exist
 
 #Feature: Allocate external IP and associate with instance,
 #    In order to test floating IP feature
@@ -17,7 +17,7 @@ Feature: Add pool of external IP's
 
     Scenario: Allocate external IP
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        And I see pool of external IP addresses "{{cc_external_ip.network}}" exist
+        And I see pool of external IP addresses "{{cc_external_network}}" exist
         When I allocate address "{{floating.name}}"
         Then I see address "{{floating.name}}" allocated
 
@@ -88,6 +88,6 @@ Feature: Add pool of external IP's
 
     Scenario: Deregister pool of external IPs
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        And I see pool of external IP addresses "{{cc_external_ip.network}}" exist
-        When I remove pool of external IP addresses "{{cc_external_ip.network}}"
-        Then I see pool of external IP addresses "{{cc_external_ip.network}}" does not exist
+        And I see pool of external IP addresses "{{cc_external_network}}" exist
+        When I remove pool of external IP addresses "{{cc_external_network}}"
+        Then I see pool of external IP addresses "{{cc_external_network}}" does not exist

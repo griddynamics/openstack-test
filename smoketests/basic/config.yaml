@@ -1,10 +1,10 @@
 build_environment: 'master'
 yum_repository: 'openstack-rhel'
 
-cc_external_ip:
+cc_external_ip: 
   &cc_ip_value 172.18.40.10
-  network: 10.101.101.0/28
 
+cc_external_network: 172.30.254.0/28
 
 network_interface: bond0
 

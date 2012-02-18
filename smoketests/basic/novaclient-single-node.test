@@ -57,7 +57,10 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
                                       | {{service}}        |
                                       {% endfor %}
         And I start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
-        Then I can not start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
+
+# TODO
+#        Then I can not start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
+
 
     Scenario: Start multiple instances with same name when unique instance names disabled
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
@@ -75,12 +78,17 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
                                       {% for service in openstack_services %}
                                       | {{service}}        |
                                       {% endfor %}
-        And I start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
-        Then I start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
+        And I start VM instance "{{vm.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
+        Then I start VM instance "{{vm2.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
 
 
     Scenario: Stop instances
-        Given VM instance "{{vm3.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-        When I stop VM instance "{{vm3.name}}"
-        Then VM instance "{{vm3.name}}" is stopped within "{{vm.boot_timeout}}" seconds
+        Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        When I stop VM instance "{{vm2.name}}"
+        And I stop VM instance "{{vm3.name}}"
+        And I stop VM instance "{{vm3.name}}"
+        Then VM instance "{{vm.name}}" is stopped within "{{vm.boot_timeout}}" seconds
+        And VM instance "{{vm2.name}}" is stopped within "{{vm.boot_timeout}}" seconds
+        And VM instance "{{vm3.name}}" is stopped within "{{vm.boot_timeout}}" seconds
+
 
