@@ -45,7 +45,7 @@ Feature: Add pool of external IP's
         And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
         When I run commands:
             |  Command                                                         | Expected  |
-            |  iptables -I OUTPUT -j ACCEPT                                    | noFail    |
+            |  sudo iptables -I OUTPUT -p icmp -j ACCEPT                       | noFail    |
         Then address "{{floating.name}}" is pingable within "{{vm.ping_deadline}}" seconds
 
 
@@ -77,7 +77,7 @@ Feature: Add pool of external IP's
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         When I run commands:
             |  Command                                                         | Expected  |
-            |  iptables -D OUTPUT -j ACCEPT                                    | noFail    |
+            |  sudo iptables -D OUTPUT -p icmp -j ACCEPT                       | noFail    |
         Then commands are executed without errors
 
 #Feature: Remove pool of external IP's
