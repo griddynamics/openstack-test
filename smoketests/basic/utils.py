@@ -77,9 +77,16 @@ class command_output(object):
         return len(self.output) > 1 and len(self.output[1]) > 0
 
 class bash(command_output):
+    last_error_code = 0
+
+    @classmethod
+    def get_last_error_code(cls):
+        return cls.last_error_code
+
     def __init__(self, cmdline):
         output = self.__execute(cmdline)
         super(bash,self).__init__(output)
+        bash.last_error_code = self.output[0]
 
     def __execute(self, cmd):
         retcode = commands.getstatusoutput(cmd)
@@ -90,6 +97,7 @@ class bash(command_output):
 #        print "cmd: %s" % cmd
 #        print "sta: %s" % status
 #        print "out: %s" % text
+
         return retcode
 
 
@@ -130,7 +138,7 @@ class rpm(object):
         
     @staticmethod
     def remove(package_list):
-        out = bash("sudo yum -y erase '%s'" % " ".join(package_list))
+        out = bash("sudo yum -y erase %s" % " ".join(package_list))
 #        wildcards_stripped_pkg_name = package.strip('*')
         wildcards_stripped_pkg_name = " ".join(package_list)
 #        return out.output_contains_pattern("(No Match for argument)|(Removed:[\s\S]*%s.*)|(Package.*%s.*not installed)" % (wildcards_stripped_pkg_name , wildcards_stripped_pkg_name))
@@ -150,7 +158,7 @@ class EnvironmentRepoWriter(object):
 [{repo_id}]
 name=Grid Dynamics OpenStack RHEL
 baseurl=http://osc-build.vm.griddynamics.net/{repo_id}
-enabled=1
+enabled=0
 gpgcheck=1
 
 """.format(repo_id=repo)
@@ -159,7 +167,7 @@ gpgcheck=1
 [{repo_id}]
 name=Grid Dynamics OpenStack RHEL
 baseurl=http://osc-build.vm.griddynamics.net/unstable/{env}/{repo_id}
-enabled=1
+enabled=0
 gpgcheck=1
 
 """.format(repo_id=repo, env=env_name)
@@ -246,7 +254,7 @@ class service(object):
     def __init__(self, name):
         self.__name = name
         self.__unusual_running_patterns = {'rabbitmq-server': '(Node.*running)|(running_applications)'}
-        self.__unusual_stopped_patterns = {'rabbitmq-server': 'no.nodes.running|no_nodes_running|nodedown'}
+        self.__unusual_stopped_patterns = {'rabbitmq-server': 'no.nodes.running|no_nodes_running|nodedown|unrecognized'}
         self.__exec_by_expect = set(['rabbitmq-server'])
 
     def __exec_cmd(self, cmd):
@@ -644,6 +652,14 @@ class nova_cli(object):
         return out.successful()
 
     @staticmethod
+    def create_network_via_flags(flags_dict):
+        params = ""
+        for flag, value in flags_dict.items():
+            params += " {flag}='{value}'".format(flag=flag, value=value)
+
+        return bash('sudo nova-manage network create %s' % params).successful()
+
+    @staticmethod
     def network_exists(cidr):
         out = bash('sudo nova-manage network list')
         return out.successful() and out.output_contains_pattern(".*%s.*" % cidr)
@@ -709,7 +725,7 @@ class nova_cli(object):
     def start_vm_instance_return_output(name, image_id, flavor_id, key_name=None):
         key_name_arg = "" if key_name is None else "--key_name %s" % key_name
         text =  nova_cli.get_novaclient_command_out("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
-        if text:
+        if text and bash.get_last_error_code() == 0:
             table = ascii_table(text)
             instance_id = table.select_values('Value', 'Property', 'id')
             if instance_id:
@@ -905,7 +921,7 @@ class euca_cli(object):
                 params['port-range']=port
 
         if source_subnet:
-            if source_subnet in ('', None):
+            if source_subnet in ('', None, '0', 'any'):
                 params['source-subnet']='0.0.0.0/0'
             else:
                 params['source-subnet']=source_subnet
@@ -1020,7 +1036,7 @@ class euca_cli(object):
 
     @staticmethod
     def sgroup_check(group_name):
-        out = bash("%s && euca-describe-groups %s |awk '{print $3}'" % (nova_cli.get_novarc_load_cmd(),group_name)).output_text()
+        out = bash("%s && euca-describe-groups %s |grep GROUP |awk '{print $3}'" % (nova_cli.get_novarc_load_cmd(),group_name)).output_text()
         if group_name in out:
             return True
         return False
@@ -1074,6 +1090,7 @@ class euca_cli(object):
             euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto='udp', src_host='', dst_port='1-65536') and \
             euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto='icmp', src_host='', dst_port='-1'):
                 return True
+            print "in if"
         return euca_cli.sgroup_check_rule_exist(dst_group, src_group, src_proto, src_host, dst_port)
 
 
@@ -1145,6 +1162,7 @@ class misc(object):
 
     @staticmethod
     def generate_ssh_keypair(file):
+        bash("rm -f %s" % file)
         return bash("ssh-keygen -N '' -f {file} -t rsa -q".format(file=file)).successful()
 
     @staticmethod
@@ -1162,7 +1180,8 @@ class misc(object):
     def delete_loop_dev(loop_dev,loop_file=""):
         if not loop_file:
             loop_file = bash("sudo losetup %s | sed 's/.*(\(.*\)).*/\1/'" % loop_dev).output_text()[0]
-        return bash("sudo losetup -d %s" % loop_dev).successful() and bash("rm -f %s" % loop_file).successful()
+        return bash("sudo losetup -d %s" % loop_dev).successful() 
+        # and bash("rm -f %s" % loop_file).successful()
 
     @staticmethod
     def check_loop_dev_exist(loop_dev):
@@ -1328,6 +1347,87 @@ class networking(object):
                 if bash('nmap -PN -p %s --open -sV %s | ' \
                         'grep -iE "open.*%s"' % (port, host, proto)).successful():
                     return True
+
+    class ifconfig(object):
+        @staticmethod
+        def interface_exists(name):
+            return bash('sudo ifconfig %s' % name).successful()
+
+        @staticmethod
+        def set(interface, options):
+            return bash('sudo ifconfig {interface} {options}'.format(interface=interface, options=options)).successful()
+
+
+
+    class brctl(object):
+        @staticmethod
+        def create_bridge(name):
+            return bash('sudo brctl addbr %s' % name).successful()
+
+        @staticmethod
+        def delete_bridge(name):
+            return networking.ifconfig.set(name, 'down') and bash('sudo brctl delbr %s' % name).successful()
+
+        @staticmethod
+        def add_interface(bridge, interface):
+            return bash('sudo brctl addif {bridge} {interface}'.format(bridge=bridge, interface=interface)).successful()
+
+    class ip(object):
+        class addr(object):
+            @staticmethod
+            def show(param_string):
+                return bash('sudo ip addr show %s' % param_string)
+
+#decorator for performing action on step failure
+def onfailure(*triggers):
+    def decorate(fcn):
+        def wrap(*args, **kwargs):
+            try:
+                retval = fcn(*args, **kwargs)
+            except:
+                for trigger in triggers:
+                    trigger()
+                raise
+            return retval
+        return wrap
+
+    return decorate
+
+
+class debug(object):
+    @staticmethod
+    def current_bunch_path():
+        global __file__
+        return conf.get_current_module_path(__file__)
+
+    class save(object):
+        @staticmethod
+        def file(src, dst):
+            def saving_function():
+                bash("sudo dd if={src} of={dst}".format(src=src,dst=dst))
+            return saving_function
+
+        @staticmethod
+        def command_output(command, file_to_save):
+            def command_output_function():
+                dst = os.path.join(debug.current_bunch_path(),file_to_save)
+                conf.log(dst, bash(command).output_text())
+            return command_output_function
+
+        @staticmethod
+        def nova_conf():
+            debug.save.file('/etc/nova/nova.conf', os.path.join(debug.current_bunch_path(), 'nova.conf.log'))()
+
+        @staticmethod
+        def log(logfile):
+            src = logfile if os.path.isabs(logfile) else os.path.join('/var/log', logfile)
+            dst = os.path.basename(src)
+            dst = os.path.join(debug.current_bunch_path(), dst if os.path.splitext(dst)[1] == '.log' else dst + ".log")
+            return debug.save.file(src, dst)
+
+
+
+
 
 
 

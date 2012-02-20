@@ -1,10 +1,12 @@
-build_environment: 'master'
+build_environment: 'localtest'
 yum_repository: 'openstack-rhel'
 
-cc_external_ip:
-  &cc_ip_value 172.18.40.10
+cc_external_ip: 
+  &cc_ip_value 127.0.0.1
 
-network_interface: bond0
+cc_external_network: 172.30.254.0/28
+
+network_interface: eth0
 
 
 compute_nodes:
@@ -31,12 +33,10 @@ project:
   name: &tenant project1
 
 network:
-  cidr: 10.1.1.0/24
+  cidr: 172.30.252.0/24
   nets: 1
-  ips:  200
-  &cc: 10.1.1.1
-  external:
-    cidr: 10.101.101.0/28
+  ips:  254
+  cc: 172.30.252.1
 
 keystone:
   admin: *name
@@ -52,17 +52,30 @@ glance:
 
 image2:
   path: images/mini_image.tar.gz
-  url: http://osc-build.vm.griddynamics.net/images/mini_image.tar.gz
+#  url: http://osc-build.vm.griddynamics.net/images/rhel_image.tar.gz
+  url: http://127.0.0.1/images/rhel_image.tar.gz
   disk: root_fs.raw
-  ram: initramfs-3.2.1.img
-  kernel: vmlinuz-3.2.1-auto
-  name: mini_image
+  ram: initramfs-2.6.32-131.0.15.el6.x86_64.img
+  kernel: vmlinuz-2.6.32-131.0.15.el6.x86_64
+  name: rhel_image
 
 image:
   path: images/ttylinux.tar.gz
-  url: http://osc-build.vm.griddynamics.net/images/mini_image.img
+#  url: http://osc-build.vm.griddynamics.net/images/mini_image.img
+  url: http://127.0.0.1/images/mini_image.img
   disk: mini_image.img
   name: solid_mini_image
+
+flat_network:
+  cidr: 172.30.253.0/24
+  nets: 1
+  ips:  254
+  label: flat
+  bridge:
+    name: br_flat
+    addr: 172.30.253.1
+    netmask: 255.255.255.0
+
 
 vm:
   user: root
@@ -88,6 +101,12 @@ vm2:
     private: id_rsa_generated
     public:  id_rsa_generated.pub
 
+vm3:
+  user: root
+  flavor: m1.tiny
+  name: "singlethone"
+  boot_timeout: 60
+  ping_deadline: 30
 
 vm3:
   user: root
