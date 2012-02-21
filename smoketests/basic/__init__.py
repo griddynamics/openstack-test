@@ -425,6 +425,7 @@ def check_can_log_via_ssh_using_saved_pwd(step, name, user):
     conf.log(conf.get_bash_log_file(),"load world.saved_root_password=%s" % world.saved_root_password)
     step_assert(step).assert_true(utils.ssh(ip, command="/bin/ls -l /", user=user, password=world.saved_root_password).successful())
 
+
 @step(u'I create bridge "(.*)"')
 def create_bridge(step, bridge_name):
     step_assert(step).assert_true(utils.networking.brctl.create_bridge(bridge_name))
@@ -458,7 +459,6 @@ def delete_bridge(step, bridge):
 @step('interface does not "(.*)" exist')
 def interface_does_not_exist(step, interface):
     step_assert(step).assert_false(utils.networking.ifconfig.interface_exists(interface))
-
 
 @step(u'I create loop device "(.*?)" in file "(.*?)" with size "(.*?)" gigabytes')
 def create_loop_device_in_file(step, source_dev, source_file, source_size):
@@ -673,5 +673,4 @@ def check_address_associated(step, address,instance):
 @step(u'I see address "(.*?)" not associated with instance "(.*?)"')
 def check_address_associated(step, address,instance):
     step_assert(step).assert_false(utils.nova_cli.floating_check_associated(address, instance))
-
 
