@@ -8,6 +8,8 @@ cc_external_network: 172.30.254.0/28
 
 network_interface: eth0
 
+cc_external_network: 172.30.254.0/28
+
 
 compute_nodes:
  - localhost
@@ -74,8 +76,6 @@ image:
 #  url: http://osc-build.vm.griddynamics.net/images/mini_image.img
   url: http://127.0.0.1/images/mini_image.img
   disk: mini_image.img
-  name: solid_mini_image
-
 vm:
   user: root
   flavor: m1.small

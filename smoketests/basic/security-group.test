@@ -260,4 +260,3 @@ Feature: Change nova config to enable security groups
         |  Command               | Expected  |
         |  sudo killall dnsmasq  |  noFail  |
         |  sudo service nova-network restart  |  noFail  |
-
