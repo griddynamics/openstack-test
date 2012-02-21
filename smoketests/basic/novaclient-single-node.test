@@ -28,7 +28,7 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
         Then VM instance "{{vm2.name}}" comes up within "{{vm2.boot_timeout}}" seconds
         And VM instance "{{vm2.name}}" is pingable within "{{vm2.ping_deadline}}" seconds
         And I see that "ssh" port of VM instance "{{vm2.name}}" is open and serves "ssh" protocol within "{{vm2.ssh_deadline}}" seconds
-        And I can log into VM "{{vm2.name}}" via SSH as "{{vm2.user}}" using saved password
+        #And I can log into VM "{{vm2.name}}" via SSH as "{{vm2.user}}" using saved password
     
 
     Scenario: Start multiple instances with same name when unique instance names enabled

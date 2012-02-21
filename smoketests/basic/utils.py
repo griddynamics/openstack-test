@@ -1253,9 +1253,10 @@ class ascii_table(object):
 
 class expect_spawn(pexpect.spawn):
     def get_output(self, code_override=None):
-        text_output = "before:\n{before}\nafter:\n{after}".format(
+        text_output = "before:\n{before}\nafter:\n{after}\ninternals:\n{internals}".format(
             before = self.before if isinstance(self.before, basestring) else pformat(self.before, indent=4),
-            after = self.after if isinstance(self.after, basestring) else pformat(self.after, indent=4))
+            after = self.after if isinstance(self.after, basestring) else pformat(self.after, indent=4),
+            internals = str(self))
 
         if code_override is not None:
             conf.bash_log(pformat(self.args), code_override, text_output)
