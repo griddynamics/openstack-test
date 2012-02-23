@@ -104,8 +104,8 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
 
     Scenario: Stop instances
         Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-        When I stop VM instance "{{vm2.name}}"
-        And I stop VM instance "{{vm3.name}}"
+        When I stop VM instance "{{vm.name}}"
+        And I stop VM instance "{{vm2.name}}"
         And I stop VM instance "{{vm3.name}}"
         Then VM instance "{{vm.name}}" is stopped within "{{vm.boot_timeout}}" seconds
         And VM instance "{{vm2.name}}" is stopped within "{{vm.boot_timeout}}" seconds
