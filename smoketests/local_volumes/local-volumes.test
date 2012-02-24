@@ -1,0 +1,135 @@
+Feature: Local volumes
+    In order to smoke test OpenStack build
+    As tester
+    I want to create and check local volumes
+
+Scenario: Setup prerequisites
+    Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys"
+
+{% for disk_type in disk_types %}
+
+Scenario: [{{disk_type}}] Configure OpenStack
+    When I change flag file "{{nova.conf_file}}" by setting flag values:
+            | Name                      | Value                                         |
+            | --local_images_type       | {{disk_type}}                                 |
+    Then the following flags in file "{{nova.conf_file}}" are set to:
+            | Name                      | Value                                         |
+            | --local_images_type       | {{disk_type}}                                 |
+
+{% if disk_type == 'lvm' %}
+Scenario: Configure LVM
+    Given the following flags in file "{{nova.conf_file}}" are set to:
+            | Name                      | Value                                         |
+            | --local_images_type       | {{disk_type}}                                 |
+    When I change flag file "{{nova.conf_file}}" by setting flag values:
+            | Name                      | Value                                         |
+            | --lvm_volume_group        | {{vg_name}}                                   |
+    And I record logical volumes in "{{vg_name}}"
+    Then the following flags in file "{{nova.conf_file}}" are set to:
+            | Name                      | Value                                         |
+            | --lvm_volume_group        | {{vg_name}}                                   |
+{% endif %}
+
+Scenario: Restart OpenStack
+    When I stop services:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+    And I kill all processes:
+            | Process       |
+            | dnsmasq       |
+    And I start services:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+    Then every service is running:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+
+Scenario: [{{disk_type}}]Start single instance and login with auto-generated root password
+    Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+    And VM image "{{image.name}}" is registered
+    When I start VM instance "{{disk_type}}-{{vm.name}}" using image "{{image.name}}",  flavor "{{vm.flavor}}" and save auto-generated password
+    Then VM instance "{{disk_type}}-{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
+    And VM instance "{{disk_type}}-{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+    And I see that "ssh" port of VM instance "{{disk_type}}-{{vm.name}}" is open and serves "ssh" protocol within "{{vm2.ssh_deadline}}" seconds
+    And I can log into VM "{{disk_type}}-{{vm.name}}" via SSH as "{{vm.user}}" using saved password
+
+Scenario: [{{disk_type}}]Create volume
+    Given I can log into VM "{{disk_type}}-{{vm.name}}" via SSH as "{{vm.user}}" using saved password
+    When I create volume for "{{disk_type}}-{{vm.name}}" with size "{{volume.size}}" as device "{{volume.device}}"
+    Then device "{{volume.device}}" is attached to "{{disk_type}}-{{vm.name}}" in "{{volume.timeout}}" seconds
+    And device "{{volume.device}}" exists in VM "{{disk_type}}-{{vm.name}}" when I SSH as "{{vm.user}}" using saved password
+
+Scenario: [{{disk_type}}]Create too big volume
+    I can't create volume for "{{disk_type}}-{{vm.name}}" with size "{{big_volume.size}}" as device "{{big_volume.device}}"
+
+{% if disk_type != 'raw' %}
+{% if disk_type == 'lvm' %}
+Scenario: [{{disk_type}}]Create snapshot
+    Given device "{{volume.device}}" is attached to "{{disk_type}}-{{vm.name}}" in "{{given_timeout}}" seconds
+    When I suspend VM instance "{{disk_type}}-{{vm.name}}"
+    And VM instance "{{disk_type}}-{{vm.name}}" is suspended within "{{vm.suspend_deadline}}" seconds
+    And I create snapshot from device "{{volume.device}}" of "{{disk_type}}-{{vm.name}}" with name "{{disk_type}}-{{volume.snapshot.name}}"
+    And I resume VM instance "{{disk_type}}-{{vm.name}}"
+    And VM instance "{{disk_type}}-{{vm.name}}" comes up within "{{vm.suspend_deadline}}" seconds
+    Then snapshot "{{disk_type}}-{{volume.snapshot.name}}" is active within "{{volume.snapshot.timeout}}" seconds
+{% else %}
+Scenario: [{{disk_type}}]Create snapshot
+    Given device "{{volume.device}}" is attached to "{{disk_type}}-{{vm.name}}" in "{{given_timeout}}" seconds
+    When I create snapshot from device "{{volume.device}}" of "{{disk_type}}-{{vm.name}}" with name "{{disk_type}}-{{volume.snapshot.name}}"
+    Then snapshot "{{disk_type}}-{{volume.snapshot.name}}" is active within "{{volume.snapshot.timeout}}" seconds
+{% endif %}
+
+Scenario: [{{disk_type}}]Create volume from snapshot
+    Given snapshot "{{disk_type}}-{{volume.snapshot.name}}" is active within "{{given_timeout}}" seconds
+    When I create volume for "{{disk_type}}-{{vm.name}}" from "{{disk_type}}-{{volume.snapshot.name}}" as device "{{volume_from_snapshot.device}}"
+    And device "{{volume_from_snapshot.device}}" is attached to "{{disk_type}}-{{vm.name}}" in "{{volume_from_snapshot.timeout}}" seconds
+    Then device "{{volume_from_snapshot.device}}" exists in VM "{{disk_type}}-{{vm.name}}" when I SSH as "{{vm.user}}" using saved password
+
+Scenario: [{{disk_type}}]Create volume from snapshot with specified size
+    Given snapshot "{{disk_type}}-{{volume.snapshot.name}}" is active within "{{given_timeout}}" seconds
+    When I create volume with resizing for "{{disk_type}}-{{vm.name}}" from "{{disk_type}}-{{volume.snapshot.name}}" with size "{{volume_from_snapshot2.size}}" as device "{{volume_from_snapshot2.device}}"
+    And device "{{volume_from_snapshot2.device}}" is attached to "{{disk_type}}-{{vm.name}}" in "{{volume_from_snapshot2.timeout}}" seconds
+    Then device "{{volume_from_snapshot2.device}}" exists in VM "{{disk_type}}-{{vm.name}}" when I SSH as "{{vm.user}}" using saved password
+    And device "{{volume_from_snapshot2.device}}" have size "{{volume_from_snapshot2.size}}" in VM "{{disk_type}}-{{vm.name}}" when I SSH as "{{vm.user}}" using saved password within "{{volume_from_snapshot2.timeout}}" seconds
+{% endif %}
+
+Scenario: [{{disk_type}}]Resize volume
+    Given device "{{volume.device}}" is attached to "{{disk_type}}-{{vm.name}}" in "{{given_timeout}}" seconds
+    When I resize device "{{volume.device}}" on "{{disk_type}}-{{vm.name}}" to "{{volume.new_size}}"
+    Then device "{{volume.device}}" on "{{disk_type}}-{{vm.name}}" is resized within "{{volume.timeout}}" seconds
+    And size of device "{{volume.device}}" on "{{disk_type}}-{{vm.name}}" is equal to "{{volume.new_size}}" within "{{volume.resize_timeout}}" seconds
+
+Scenario: [{{disk_type}}]Check device size in guest OS
+    Given device "{{volume.device}}" on "{{disk_type}}-{{vm.name}}" is resized within "{{volume.timeout}}" seconds
+    When I reboot VM instance "{{disk_type}}-{{vm.name}}"
+    And VM instance "{{disk_type}}-{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
+    And VM instance "{{disk_type}}-{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+    Then I see that "ssh" port of VM instance "{{disk_type}}-{{vm.name}}" is open and serves "ssh" protocol within "{{vm2.ssh_deadline}}" seconds
+    And device "{{volume.device}}" have size "{{volume.new_size}}" in VM "{{disk_type}}-{{vm.name}}" when I SSH as "{{vm.user}}" using saved password within "{{volume.resize_timeout}}" seconds
+
+Scenario: [{{disk_type}}]Delete volume
+    Given device "{{volume.device}}" is attached to "{{disk_type}}-{{vm.name}}" in "{{given_timeout}}" seconds
+    When I delete device "{{volume.device}}" on "{{disk_type}}-{{vm.name}}"
+    Then device "{{volume.device}}" on "{{disk_type}}-{{vm.name}}" is deleted within "{{volume.delete_timeout}}" seconds
+    And device "{{volume.device}}" doesn't exists in VM "{{disk_type}}-{{vm.name}}" when I SSH as "{{vm.user}}" using saved password
+
+Scenario: [{{disk_type}}]Delete vm
+    When I record volumes for "{{disk_type}}-{{vm.name}}"
+    And I terminate "{{disk_type}}-{{vm.name}}"
+    And "{{disk_type}}-{{vm.name}}" is terminated within "{{volume.timeout}}" seconds
+    Then recorded volumes are deleted
+
+{% if disk_type == 'lvm' %}
+Scenario: Cleanup Local Volumes
+    Given the following flags in file "{{nova.conf_file}}" are set to:
+            | Name                      | Value                                         |
+            | --local_images_type       | {{disk_type}}                                 |
+    I cleanup logical volumes for "{{vg_name}}"
+{% endif %}
+{% endfor %}

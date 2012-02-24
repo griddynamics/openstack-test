@@ -1,0 +1,4 @@
+Feature: Check OpenStack installation and perform clean up
+    In order run complete test execution cycle  on already deployed and working OpenStack
+    As tester
+    I want to verify OpenStack installation is not still there and perform extra clean up

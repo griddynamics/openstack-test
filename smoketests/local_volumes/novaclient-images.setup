@@ -1,0 +1,11 @@
+Feature: Create user and project using python-novaclient CLI
+    In order to prepare environment for smoke test
+    As cloud admin
+    I want to register images
+    
+    Scenario: Upload and register images
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And VM image tarball is available at "{{image.url}}"
+        When I download VM image tarball at "{{image.url}}" and unpack it
+        And I register VM image "{{image.name}}" for owner "{{user.name}}" using disk "{{image.disk}}", ram "{{image.ram}}", kernel "{{image.kernel}}"
+        Then VM image "{{image.name}}" is registered

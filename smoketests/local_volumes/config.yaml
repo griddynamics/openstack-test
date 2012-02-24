@@ -1,21 +1,8 @@
 build_environment: 'master'
 yum_repository: 'openstack-rhel'
 
-server:
-  internal: &server 172.18.40.10
-  external: &ip 172.18.40.10
-
-# Global services addresses
-service:
-  nova: *server
-  keystone: *server
-  swift: *server
-  glance: *server
-
-cc_external_ip: 
+cc_external_ip:
   &cc_ip_value 172.18.40.10
-
-cc_external_network: 172.30.254.0/28
 
 network_interface: bond0
 
@@ -24,10 +11,11 @@ compute_nodes:
  - localhost
  - *cc_ip_value
 
+
+
 nova:
   rpm_packages: openstack-nova-node-full
   conf_file: /etc/nova/nova.conf
-  api_conf: /etc/nova/api-paste.ini
 
 db:
   admin: root
@@ -36,64 +24,60 @@ db:
   user: nova
   password: nova
 
+
 user:
-  name: &name admin1
-  password: &password secrete
+  name: admin1
 
 project:
-  name: &tenant project1
+  name: project1
 
 network:
   cidr: 172.30.252.0/24
   nets: 1
   ips:  254
-  cc: 172.30.252.1
-  cc_cidr: 172.30.252.1/32
 
-keystone:
-  admin: *name
-  admin_password: *password
-  tenant: *tenant
-  region: kRegion
-  cc: *cc_ip_value
-  token: 111333555777
-
-glance:
-  api_conf: /etc/glance/glance-api.conf
-  registry_conf: /etc/glance/glance-registry.conf
-
-image2:
-  path: images/mini_image.tar.gz
+image:
+  path: images/ttylinux.tar.gz
   url: http://osc-build.vm.griddynamics.net/images/rhel_image.tar.gz
   disk: rootfs.raw
   ram: initramfs-2.6.32-131.0.15.el6.x86_64.img
   kernel: vmlinuz-2.6.32-131.0.15.el6.x86_64
   name: rhel_image
 
-image:
-  path: images/ttylinux.tar.gz
-  url: http://osc-build.vm.griddynamics.net/images/mini_image.img
-  disk: mini_image.img
-  name: solid_mini_image
+volume:
+  size: 100M
+  #at extent for LVM
+  new_size: 130023424
+  device: /dev/vdb
+  timeout: 30
+  resize_timeout: 60
+  delete_timeout: 60
+  snapshot:
+    name: test_volume_snapshot
+    timeout: 90
 
-flat_network:
-  cidr: 172.30.253.0/24
-  nets: 1
-  ips:  254
-  label: flat
-  bridge:
-    name: br_flat
-    addr: 172.30.253.1
-    netmask: 255.255.255.0
+big_volume:
+  size: 10000G
+  device: /dev/vdc
 
+volume_from_snapshot:
+  device: /dev/vdc
+  timeout: 30
+
+volume_from_snapshot2:
+  #at extent for LVM
+  size: 130023424
+  device: /dev/vdd
+  timeout: 30
 
 vm:
   user: root
-  flavor: m1.small
-  name: "rhelinstance1"
-  boot_timeout: 180
-  ping_deadline: 90
-  ssh_deadline: 90
+  flavor: m1.tiny
+  name: "rhel_instance1"
+  boot_timeout: 60
+  ping_deadline: 60
+  ssh_deadline: 60
+  suspend_deadline: 60
   keypair:
     name: test_key
     private: id_rsa_generated
@@ -101,34 +85,15 @@ vm:
 
 vm2:
   user: root
-  flavor: m1.small
-  name: "rhelinstance2"
-  boot_timeout: 180
-  ping_deadline: 90
-  ssh_deadline: 90
-  keypair:
-    name: test_key
-    private: id_rsa_generated
-    public:  id_rsa_generated.pub
-
-vm3:
-  user: root
   flavor: m1.tiny
-  name: "singlethone"
+  name: "rhel_instance2"
   boot_timeout: 60
   ping_deadline: 30
+  ssh_deadline: 60
 
-vm3:
-  user: root
-  flavor: m1.small
-  name: "rhelinstance3"
-  boot_timeout: 180
-  ping_deadline: 90
-  ssh_deadline: 90
-  keypair:
-    name: test_key
-    private: id_rsa_generated
-    public:  id_rsa_generated.pub
+
+instance1: ins1
+instance2: ins2
 
 openstack_services:
  - nova-api
@@ -139,8 +104,11 @@ openstack_services:
  - glance-api
  - glance-registry
 
-supplementary_services:
+buggy_services:
  - messagebus
+ - avahi-daemon
+
+supplementary_services:
  - rabbitmq-server
  - mysqld
  - libvirtd
@@ -158,8 +126,6 @@ test_prepequisites:
  - curl
  - nmap
  - pexpect
- - nova2ools
-
 
 packages_to_install:
  - libvirt
@@ -168,9 +134,9 @@ packages_to_install:
  - rabbitmq-server
  - openstack-nova-node-full
  - MySQL-python
- - euca2ools
+ - nova2ools
+ - python-amqplib
  - python-kombu
-## ^^^ TODO ADD TO DEPS
 
 packages_to_clean:
  - django-file-upload
@@ -201,7 +167,10 @@ packages_to_clean:
  - python-glance
  - python-nova
  - python-novaclient
-
+ - openstack-swift
+ - nova2ools
+ - python-amqplib
+ - python-kombu
 
 dep_wildcards_to_clean:
  - '*qemu*'
@@ -234,47 +203,11 @@ state_files:
  - '/tmp/.guestfs*'
  - '/tmp/tmp*'
 
-volume:
-  source_dev:  '/dev/loop4'
-  source_dev_file: '/tmp/loop4'
-  source_dev_size: 4
-  group: nova-volumes
-  name:   vol
-  dev:   '/dev/vdc'
-  size: 1
-  zone: nova
-  timeout: 60
-  attach_deadline: 60
-  dir: '/tmp/nova-volume-test'
+disk_types:
+ - lvm
+ - raw
+ - qcow
 
-volume1:
-  name:   vol1
-  dev:   '/dev/vdd'
-  size: 1
-  zone: nova
-  timeout: 60
-  attach_deadline: 60
+vg_name: nova
 
-
-volume_packages:
- - scsi-target-utils
- - lvm2
-
-volume_services1:
- - tgtd
-
-volume_services2:
- - nova-volume
-
-sg:
-  name: smoketest
-
-sg2:
-  name: smoketest2
-
-sg3:
-  name: smoketest3
-
-
-floating:
-  name: floatip
+given_timeout: 5

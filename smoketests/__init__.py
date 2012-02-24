@@ -5,7 +5,10 @@ from utils import onfailure
 import os
 import lettuce_bunch.special
 import conf
-import time
+from lettuce_bunch.special import get_current_bunch_dir
+
+get_current_bunch_dir()
+
 
 dir_path = conf.get_current_module_path(__file__)
 

@@ -1,0 +1,5 @@
+Feature: Create single VM in OS
+    In order to prepare environment for smoke test
+    As tester
+    I want to create virtual machine
+

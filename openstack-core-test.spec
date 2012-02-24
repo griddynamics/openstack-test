@@ -28,19 +28,19 @@ Test harness for OpenStack written for Bunch tool
 %setup -q -n %{name}-%{version}
 
 %build
+%{__python} setup.py build
 
 %install
 rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT
-
+%{__python} setup.py install --prefix=%{_prefix} --root=%{buildroot} --single-version-externally-managed -O1  --record=INSTALLED_FILES
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-%files
+%files -f INSTALLED_FILES
 %defattr(-,root,root,-)
 /usr/local/share/%{name}
-
 
 %changelog
 * Thu Feb 2 2012 Sergey Kosyrev  <skosyrev@griddynamics.com>

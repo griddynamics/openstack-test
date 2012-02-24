@@ -1,0 +1,69 @@
+Feature: Stop services, remove packages and clear all openstack stuff
+
+    Scenario: Stop services
+        Given current user can execute sudo without password
+        When I stop services:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+            {% for service in supplementary_services %}
+            | {{ service }} |
+            {% endfor %}
+        Then every service is stopped:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+            {% for service in supplementary_services %}
+            | {{ service }} |
+            {% endfor %}
+
+    Scenario: Remove packages
+        Given current user can execute sudo without password
+        When I remove RPM package(s):
+            | PackageName   |
+            {% for package in packages_to_install %}
+            | {{ package }} |
+            {% endfor %}
+            {% for package in packages_to_clean %}
+            | {{ package }} |
+            {% endfor %}
+            {% for package in dep_wildcards_to_clean %}
+            | {{ package }} |
+            {% endfor %}
+        Then every RPM package is not installed:
+            | PackageName   |
+            {% for package in packages_to_install %}
+            | {{ package }} |
+            {% endfor %}
+            {% for package in packages_to_clean %}
+            | {{ package }} |
+            {% endfor %}
+
+    Scenario: Clean state files
+        Given current user can execute sudo without password
+        And every RPM package is not installed:
+            | PackageName   |
+            {% for package in packages_to_install %}
+            | {{ package }} |
+            {% endfor %}
+            {% for package in packages_to_clean %}
+            | {{ package }} |
+            {% endfor %}
+        When I kill all processes:
+            | Process |
+            {% for item in processes_to_kill %}
+            | {{ item }} |
+            {% endfor %}
+        And I clean state files:
+            | PathWildCard |
+            {% for item in state_files %}
+            | {{ item }} |
+            {% endfor %}
+        Then no files exist:
+            | PathWildCard |
+            {% for item in state_files %}
+            | {{ item }} |
+            {% endfor %}
+
