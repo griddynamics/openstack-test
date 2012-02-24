@@ -1,8 +1,0 @@
-Feature: Do preparations to test Flat Networking
-
-    Scenario: Create bridge for Flat Networking
-        Given current user can execute sudo without password
-        When I create bridge "{{flat_network.bridge.name}}"
-        And I add interface "{{network_interface}}" to the bridge "{{flat_network.bridge.name}}"
-        And I configure interface "{{flat_network.bridge.name}}" assigning address "{{flat_network.bridge.addr}}" and netmask "{{flat_network.bridge.netmask}}"
-        Then interface "{{flat_network.bridge.name}}" has address "{{flat_network.bridge.addr}}"
