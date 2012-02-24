@@ -6,7 +6,6 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
     Scenario: Setup prerequisites
         Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys"
 
-
     Scenario: Start single instance and bind with pre-uploaded keypair
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM image "{{image.name}}" is registered
@@ -20,7 +19,6 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
             |  Command  |   Expected  |
             |   whoami  |   root      |
 
-
     Scenario: Start single instance and login with auto-generated root password
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And VM image "{{image.name}}" is registered
@@ -30,84 +28,11 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
         And I see that "ssh" port of VM instance "{{vm2.name}}" is open and serves "ssh" protocol within "{{vm2.ssh_deadline}}" seconds
 #        And I can log into VM "{{vm2.name}}" via SSH as "{{vm2.user}}" using saved password
 
-    Scenario: Start multiple instances with same name when unique instance names enabled
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        And VM image "{{image.name}}" is registered
-        When I change flag file "{{nova.conf_file}}" by setting flag values:
-                                      |     Name             | Value |
-                                      | --project_uniq_names | true  |
-        And I stop services:
-                                      |     ServiceName    |
-                                      {% for service in openstack_services %}
-                                      | {{service}}        |
-                                      {% endfor %}
-        And I start services:
-                                      |     ServiceName    |
-                                      {% for service in openstack_services %}
-                                      | {{service}}        |
-                                      {% endfor %}
-        And I start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
-# TODO
-#        Then I can not start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
-
-
-    Scenario: Stop instances
-        Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-        And VM instance "{{vm2.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-        When I stop VM instance "{{vm.name}}"
-        And I stop VM instance "{{vm2.name}}"
-        Then VM instance "{{vm.name}}" is stopped within "{{vm.boot_timeout}}" seconds
-        And VM instance "{{vm2.name}}" is stopped within "{{vm.boot_timeout}}" seconds
-
-
-    Scenario: Start multiple instances with same name when unique instance names enabled
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        And VM image "{{image.name}}" is registered
-        When I change flag file "{{nova.conf_file}}" by setting flag values:
-                                      |     Name             | Value |
-                                      | --project_uniq_names | true  |
-        And I stop services:
-                                      |     ServiceName    |
-                                      {% for service in openstack_services %}
-                                      | {{service}}        |
-                                      {% endfor %}
-        And I start services:
-                                      |     ServiceName    |
-                                      {% for service in openstack_services %}
-                                      | {{service}}        |
-                                      {% endfor %}
-        And I start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
-
-# TODO
-#        Then I can not start VM instance "{{vm3.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
-
-
-    Scenario: Start multiple instances with same name when unique instance names disabled
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        And VM image "{{image.name}}" is registered
-        When I change flag file "{{nova.conf_file}}" by setting flag values:
-                                      |     Name             | Value |
-                                      | --project_uniq_names | false |
-        And I stop services:
-                                      |     ServiceName    |
-                                      {% for service in openstack_services %}
-                                      | {{service}}        |
-                                      {% endfor %}
-        And I start services:
-                                      |     ServiceName    |
-                                      {% for service in openstack_services %}
-                                      | {{service}}        |
-                                      {% endfor %}
-        And I start VM instance "{{vm.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
-        Then I start VM instance "{{vm2.name}}" using image "{{image.name}}", flavor "{{vm3.flavor}}"
-
 
     Scenario: Stop instances
         Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
         When I stop VM instance "{{vm.name}}"
         And I stop VM instance "{{vm2.name}}"
-        And I stop VM instance "{{vm3.name}}"
         Then VM instance "{{vm.name}}" is stopped within "{{vm.boot_timeout}}" seconds
         And VM instance "{{vm2.name}}" is stopped within "{{vm.boot_timeout}}" seconds
-        And VM instance "{{vm3.name}}" is stopped within "{{vm.boot_timeout}}" seconds
 
