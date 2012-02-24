@@ -133,3 +133,10 @@ Feature: Do preparations to test Flat Networking
         Given interface "{{flat_network.bridge.name}}" exists
         When I delete bridge "{{flat_network.bridge.name}}"
         Then interface does not "{{flat_network.bridge.name}}" exist
+
+
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+            |  Command               | Expected  |
+            |  sudo killall dnsmasq  |  noFail  |
+            |  sudo service nova-network restart  |  noFail  |

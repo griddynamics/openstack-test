@@ -81,3 +81,8 @@ Feature: Change uniq-names flag and check it works
         And VM instance "{{vm2.name}}" is stopped within "{{vm.boot_timeout}}" seconds
 
 
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+            |  Command               | Expected  |
+            |  sudo killall dnsmasq  |  noFail  |
+            |  sudo service nova-network restart  |  noFail  |

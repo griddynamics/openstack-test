@@ -190,7 +190,7 @@ Feature: Install, start services and create virtual disk needed to test volume
 
         When I login to VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}" and run commands:
             |  Command  |   Expected  |
-            | dmesg                                  |  noFail  |
+            | dmesg \| tail -20                                    |  noFail  |
             | cat /proc/diskstats                                  |  noFail  |
 
         Then I see volume "{{volume1.name}}" attached to VM instance "{{vm2.name}}"
@@ -254,6 +254,13 @@ Feature: Install, start services and create virtual disk needed to test volume
         And I remove loop device "{{volume.source_dev}}"
         Then I see lvm group "{{volume.group}}" on device "{{volume.source_dev}}" removed
         And I see loop device "{{volume.source_dev}}" removed
+
+
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+        |  Command               | Expected  |
+        |  sudo killall dnsmasq  |  noFail  |
+        |  sudo service nova-network restart  |  noFail  |
 
 
 
