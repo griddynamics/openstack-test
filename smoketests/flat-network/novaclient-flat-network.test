@@ -1,7 +1,17 @@
-Feature: Start instance(s) in single node deployment using  python-novaclient CLI for Flat Network setup
-    In order to smoke test OpenStack build
-    As tester
-    I want to register start instance and verify it is up and available via SSH
+Feature: Do preparations to test Flat Networking
+
+    Scenario: Create bridge for Flat Networking
+        Given current user can execute sudo without password
+        When I create bridge "{{flat_network.bridge.name}}"
+        And I add interface "{{network_interface}}" to the bridge "{{flat_network.bridge.name}}"
+        And I configure interface "{{flat_network.bridge.name}}" assigning address "{{flat_network.bridge.addr}}" and netmask "{{flat_network.bridge.netmask}}"
+        Then interface "{{flat_network.bridge.name}}" has address "{{flat_network.bridge.addr}}"
+
+
+#Feature: Start instance(s) in single node deployment using  python-novaclient CLI for Flat Network setup
+#    In order to smoke test OpenStack build
+#    As tester
+#    I want to register start instance and verify it is up and available via SSH
 
     Scenario: Setup prerequisites
         Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys"
@@ -117,3 +127,9 @@ Feature: Start instance(s) in single node deployment using  python-novaclient CL
             | {{ service }} |
             {% endfor %}
 
+#Feature: Perform clean up after Flat Network test
+
+    Scenario: Delete bridge interface created by Flat Network setup
+        Given interface "{{flat_network.bridge.name}}" exists
+        When I delete bridge "{{flat_network.bridge.name}}"
+        Then interface does not "{{flat_network.bridge.name}}" exist
