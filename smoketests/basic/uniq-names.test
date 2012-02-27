@@ -48,7 +48,7 @@ Feature: Change uniq-names flag and check it works
     Scenario: Check we can not start instancr with same name
         Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
 # TODO
-#        Then I can not start VM instance "{{vm.name}}" using image "{{image.name}}", flavor "{{vm.flavor}}"
+        Then I can not start VM instance "{{vm.name}}" using image "{{image.name}}", flavor "{{vm.flavor}}"
 
 
     Scenario: Stop instances after test
