@@ -3,6 +3,12 @@ Feature: Add pool of external IP's
     As tester
     I want to Add pool of external IP's using nova-manage
 
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+        |  Command                            | Expected |
+        |  sudo killall dnsmasq \|\| echo     |  noFail  |
+        |  sudo service nova-network restart  |  noFail  |
+
 
     Scenario: Register pool of external IPs
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
@@ -84,14 +90,6 @@ Feature: Add pool of external IP's
 #    In order to clean after test of floating IP feature
 #    As tester
 #    I want to remove pool of external IP's using nova-manage
-
-
-
-    Scenario: Workaround for dnsmasq hang up
-        I run commands:
-        |  Command               | Expected  |
-        |  sudo killall dnsmasq  |  noFail  |
-        |  sudo service nova-network restart  |  noFail  |
 
 
     Scenario: Deregister pool of external IPs

@@ -35,6 +35,13 @@ Feature: Change nova config to enable security groups
             | {{ service }} |
             {% endfor %}
 
+
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+        |  Command                            | Expected |
+        |  sudo killall dnsmasq \|\| echo     |  noFail  |
+        |  sudo service nova-network restart  |  noFail  |
+
 #Feature: Test security groups
 #    In order to smoke test security group functionality
 #    As tester
@@ -81,15 +88,11 @@ Feature: Change nova config to enable security groups
         And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg2.name}}" exist
         And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg3.name}}" exist
 
-
-
     Scenario: Workaround for dnsmasq hang up
         I run commands:
-        |  Command               | Expected  |
-        |  sudo killall dnsmasq  |  noFail  |
+        |  Command                            | Expected |
+        |  sudo killall dnsmasq \|\| echo     |  noFail  |
         |  sudo service nova-network restart  |  noFail  |
-
-
 
     Scenario: Start instance
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
@@ -257,6 +260,6 @@ Feature: Change nova config to enable security groups
 
     Scenario: Workaround for dnsmasq hang up
         I run commands:
-        |  Command               | Expected  |
-        |  sudo killall dnsmasq  |  noFail  |
+        |  Command                            | Expected |
+        |  sudo killall dnsmasq \|\| echo     |  noFail  |
         |  sudo service nova-network restart  |  noFail  |

@@ -40,6 +40,15 @@ Feature: Install, start services and create virtual disk needed to test volume
             | {{ service }} |
             {% endfor %}
 
+
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+        |  Command                            | Expected  |
+        |  sudo killall dnsmasq \|\| echo     |  noFail  |
+        |  sudo service nova-network restart  |  noFail  |
+
+
+
 #    Scenario: Clean after privious run
 #        When I remove lvm group "{{volume.group}}" on device "{{volume.source_dev}}"
 #    Scenario: Clean after privious run
@@ -255,12 +264,6 @@ Feature: Install, start services and create virtual disk needed to test volume
         Then I see lvm group "{{volume.group}}" on device "{{volume.source_dev}}" removed
         And I see loop device "{{volume.source_dev}}" removed
 
-
-    Scenario: Workaround for dnsmasq hang up
-        I run commands:
-        |  Command               | Expected  |
-        |  sudo killall dnsmasq  |  noFail  |
-        |  sudo service nova-network restart  |  noFail  |
 
 
 

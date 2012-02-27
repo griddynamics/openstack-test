@@ -99,7 +99,11 @@ Feature: Install OpenStack from scratch on clean environment
             | --glance_api_servers      | {{cc_external_ip}}:9292                       |
             | --vncproxy_url            | http://{{cc_external_ip}}::6080               |
 
-
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+            |  Command                            | Expected |
+            |  sudo killall dnsmasq \|\| echo     |  noFail  |
+            |  sudo service nova-network restart  |  noFail  |
 
 
     Scenario: Start OpenStack services

@@ -18,6 +18,14 @@ Feature: Change uniq-names flag and check it works
                                       {% endfor %}
 
 
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+            |  Command                            | Expected  |
+            |  sudo killall dnsmasq \|\| echo     |  noFail  |
+            |  sudo service nova-network restart  |  noFail  |
+
+
+
 #Feature: Check uniq names feature
 #    In order to smoke test OpenStack build
 #    As tester
@@ -34,6 +42,11 @@ Feature: Change uniq-names flag and check it works
                                       | --project_uniq_names | true  |
 
         When I start VM instance "{{vm.name}}" using image "{{image.name}}", flavor "{{vm.flavor}}"
+        Then VM instance "{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
+
+
+    Scenario: Check we can not start instancr with same name
+        Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
 # TODO
 #        Then I can not start VM instance "{{vm.name}}" using image "{{image.name}}", flavor "{{vm.flavor}}"
 
@@ -61,6 +74,11 @@ Feature: Change uniq-names flag and check it works
                                       | {{service}}        |
                                       {% endfor %}
 
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+            |  Command                            | Expected  |
+            |  sudo killall dnsmasq \|\| echo     |  noFail  |
+            |  sudo service nova-network restart  |  noFail  |
 
 
     Scenario: Start multiple instances with same name when unique instance names disabled
@@ -81,8 +99,3 @@ Feature: Change uniq-names flag and check it works
         And VM instance "{{vm2.name}}" is stopped within "{{vm.boot_timeout}}" seconds
 
 
-    Scenario: Workaround for dnsmasq hang up
-        I run commands:
-            |  Command               | Expected  |
-            |  sudo killall dnsmasq  |  noFail  |
-            |  sudo service nova-network restart  |  noFail  |

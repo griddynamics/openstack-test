@@ -58,6 +58,12 @@ Feature: Setup keystone on installed OpenStack
             {% endfor %}
             | keystone |
 
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+            |  Command                            | Expected |
+            |  sudo killall dnsmasq \|\| echo     |  noFail  |
+            |  sudo service nova-network restart  |  noFail  |
+
 #Feature: Check keystone service
 #    In order to smoke test keystone functionality
 #    As root
