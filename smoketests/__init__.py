@@ -608,6 +608,7 @@ def check_security_group_not_exist(step, group_name):
     step_assert(step).assert_false(utils.euca_cli.sgroup_check(group_name=group_name))
 
 @step(u'I add rule allow from group "(.*?)", protocol "(.*?)", host "(.*?)" to access port "(.*?)" in group "(.*?)"')
+@onfailure(utils.debug.save.log('nova/nova-api.log'))
 def add_security_group_rule(step,from_group, proto, src, port, dst_group):
     step_assert(step).assert_true(utils.euca_cli.sgroup_add_rule(dst_group=dst_group, src_group=from_group, src_proto=proto, src_host=src, dst_port=port))
 
