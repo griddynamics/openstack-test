@@ -68,25 +68,25 @@ Feature: Change nova config to enable security groups
         And I see security group "{{sg2.name}}" exist
         And I see security group "{{sg3.name}}" exist
 
-        When I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group ""
-        And I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}"
-        And I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg2.name}}"
-        And I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg3.name}}"
+        When I add rule allow from group "", protocol "tcp", host "{{network.cidr}}" to access port "22" in group ""
+        And I add rule allow from group "", protocol "tcp", host "{{network.cidr}}" to access port "22" in group "{{sg.name}}"
+        And I add rule allow from group "", protocol "tcp", host "{{network.cidr}}" to access port "22" in group "{{sg2.name}}"
+        And I add rule allow from group "", protocol "tcp", host "{{network.cidr}}" to access port "22" in group "{{sg3.name}}"
 
-        And I add rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group ""
-        And I add rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg.name}}"
-        And I add rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg2.name}}"
-        And I add rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg3.name}}"
+        And I add rule allow from group "", protocol "icmp", host "{{network.cidr}}" to access port "" in group ""
+        And I add rule allow from group "", protocol "icmp", host "{{network.cidr}}" to access port "" in group "{{sg.name}}"
+        And I add rule allow from group "", protocol "icmp", host "{{network.cidr}}" to access port "" in group "{{sg2.name}}"
+        And I add rule allow from group "", protocol "icmp", host "{{network.cidr}}" to access port "" in group "{{sg3.name}}"
 
-        Then I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "" exist
-        And I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}" exist
-        And I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg2.name}}" exist
-        And I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg3.name}}" exist
+        Then I see rule allow from group "", protocol "tcp", host "{{network.cidr}}" to access port "22" in group "" exist
+        And I see rule allow from group "", protocol "tcp", host "{{network.cidr}}" to access port "22" in group "{{sg.name}}" exist
+        And I see rule allow from group "", protocol "tcp", host "{{network.cidr}}" to access port "22" in group "{{sg2.name}}" exist
+        And I see rule allow from group "", protocol "tcp", host "{{network.cidr}}" to access port "22" in group "{{sg3.name}}" exist
 
-        And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "" exist
-        And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg.name}}" exist
-        And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg2.name}}" exist
-        And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg3.name}}" exist
+        And I see rule allow from group "", protocol "icmp", host "{{network.cidr}}" to access port "" in group "" exist
+        And I see rule allow from group "", protocol "icmp", host "{{network.cidr}}" to access port "" in group "{{sg.name}}" exist
+        And I see rule allow from group "", protocol "icmp", host "{{network.cidr}}" to access port "" in group "{{sg2.name}}" exist
+        And I see rule allow from group "", protocol "icmp", host "{{network.cidr}}" to access port "" in group "{{sg3.name}}" exist
 
     Scenario: Workaround for dnsmasq hang up
         I run commands:
