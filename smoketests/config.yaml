@@ -37,6 +37,7 @@ network:
   nets: 1
   ips:  254
   cc: 172.30.252.1
+  cc_cidr: 172.30.252.1/32
 
 keystone:
   admin: *name
