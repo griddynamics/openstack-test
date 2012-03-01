@@ -1,0 +1,43 @@
+Feature: Change nova config to enable security groups
+    In order to test security-group functionality
+    As tester
+    I want to change nova config
+
+    Scenario: Configure OpenStack compute
+        Given every RPM package is installed:
+            | PackageName   |
+            {% for package in packages_to_install %}
+            | {{ package }} |
+            {% endfor %}
+        When I change flag file "{{nova.conf_file}}" by setting flag values:
+            | Name                      | Value              |
+            | --allow_same_net_traffic  | false              |
+
+         Then the following flags in file "{{nova.conf_file}}" are set to:
+            | Name                      | Value              |
+            | --allow_same_net_traffic  | false              |
+
+
+    Scenario: Restart OpenStack services
+        Given every service is running:
+            | ServiceName   |
+            {% for service in supplementary_services %}
+            | {{ service }} |
+            {% endfor %}
+        When I restart services:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+        Then every service is running:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+
+
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+        |  Command                            | Expected |
+        |  sudo killall dnsmasq \|\| echo     |  noFail  |
+        |  sudo service nova-network restart  |  noFail  |

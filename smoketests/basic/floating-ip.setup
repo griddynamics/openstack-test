@@ -1,0 +1,16 @@
+Feature: Add pool of external IP's
+    In order to have test floating IP feature
+    As tester
+    I want to Add pool of external IP's using nova-manage
+
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+        |  Command                            | Expected |
+        |  sudo killall dnsmasq \|\| echo     |  noFail  |
+        |  sudo service nova-network restart  |  noFail  |
+
+
+    Scenario: Register pool of external IPs
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        When I add pool of external IP addresses "{{cc_external_network}}"
+        Then I see pool of external IP addresses "{{cc_external_network}}" exist

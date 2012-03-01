@@ -1,35 +1,7 @@
-Feature: Change uniq-names flag and check it works
+Feature: Check uniq names feature
     In order to smoke test OpenStack build
     As tester
-
-    Scenario: Enable uniq names flag in nova.conf
-        Then every service is running:
-                                      | ServiceName   |
-                                      {% for service in openstack_services %}
-                                      | {{ service }} |
-                                      {% endfor %}
-        When I change flag file "{{nova.conf_file}}" by setting flag values:
-                                      |     Name             | Value |
-                                      | --project_uniq_names | true  |
-        And I restart services:
-                                      |     ServiceName    |
-                                      {% for service in openstack_services %}
-                                      | {{service}}        |
-                                      {% endfor %}
-
-
-    Scenario: Workaround for dnsmasq hang up
-        I run commands:
-            |  Command                            | Expected  |
-            |  sudo killall dnsmasq \|\| echo     |  noFail  |
-            |  sudo service nova-network restart  |  noFail  |
-
-
-
-#Feature: Check uniq names feature
-#    In order to smoke test OpenStack build
-#    As tester
-#    I want to register start instance and verify it is up and available. Check i can not start instance with same name
+    I want to register start instance and verify it is up and available. Check i can not start instance with same name
 
     Scenario: Setup prerequisites
         Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys"
@@ -91,11 +63,5 @@ Feature: Change uniq-names flag and check it works
         And I start VM instance "{{vm2.name}}" using image "{{image.name}}", flavor "{{vm2.flavor}}"
         Then VM instance "{{vm2.name}}" comes up within "{{vm.boot_timeout}}" seconds
 
-    Scenario: Stop instances
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        When I stop VM instance "{{vm2.name}}"
-        And I stop VM instance "{{vm2.name}}"
-        Then VM instance "{{vm2.name}}" is stopped within "{{vm.boot_timeout}}" seconds
-        And VM instance "{{vm2.name}}" is stopped within "{{vm.boot_timeout}}" seconds
 
 

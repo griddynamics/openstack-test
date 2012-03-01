@@ -4,7 +4,6 @@ import time
 import re
 import tempfile
 from urlparse import urlparse
-from datetime import datetime
 import string
 from collections import namedtuple
 import pexpect
@@ -13,9 +12,11 @@ from pprint import pformat
 import conf
 from lettuce import world
 from IPy import IP
+import collections
+import yaml
 
-# Make Bash an object
 
+#Initialize global mappings with empty dicts. They are reassigned with "translate" properties at the end of file
 world.instances = {}
 world.images = {}
 world.volumes = {}
@@ -45,6 +46,7 @@ ENDPOINT_TEMPLATES = {
       "nova_billing": ('http://%host%:8787', 'http://%host%:8787', 'http://%host%:8787', '1', '1'),
       "identity": ('http://%host%:5000/v2.0', 'http://%host%:35357/v2.0', 'http://%host%:5000/v2.0', '1', '1'),
 }
+
 
 def wait(timeout=DEFAULT_TIMEOUT, poll_interval=DEFAULT_POLL_INTERVAL):
     def decorate(fcn):
@@ -875,6 +877,16 @@ class nova_cli(object):
         return False
 
     @staticmethod
+    def get_instance_id_list(name):
+        text = nova_cli.get_novaclient_command_out("list")
+        if text and bash.get_last_error_code() == 0:
+            table = ascii_table(text)
+            ids = table.select_values('ID', 'Name',name)
+            return ids
+        return []
+
+
+    @staticmethod
     def wait_instance_comes_up(name, timeout):
         @wait(timeout=timeout)
         def polling_function(name):
@@ -914,6 +926,16 @@ class nova_cli(object):
             world.floating[name] = table.select_values('Ip','Instance', 'None')[0]
             if world.floating[name]:return True
         return False
+
+    @staticmethod
+    def get_floating_ip_list(name):
+        text = nova_cli.get_novaclient_command_out("floating-ip-list")
+        if text and bash.get_last_error_code() == 0:
+            table = ascii_table(text)
+            ips = table.select_values('Ip', 'Instance',name)
+            return ips
+        return []
+
 
     @staticmethod
     def floating_deallocate(name):
@@ -966,10 +988,20 @@ class nova_cli(object):
                 return True
         return False
 
+    @staticmethod
+    def get_volume_id_list(name):
+        text = nova_cli.get_novaclient_command_out("volume-list")
+        if text and bash.get_last_error_code() == 0:
+            table = ascii_table(text)
+            ids = table.select_values('ID', 'Display Name',name)
+            return ids
+        return []
 
-        ##============##
-        ##  EUCA CLI  ##
-        ##============##
+
+
+##============##
+##  EUCA CLI  ##
+##============##
 
 
 class euca_cli(object):
@@ -1025,6 +1057,7 @@ class euca_cli(object):
 
 #        print "\nPARSE-PARAMS: %s"  % cmdline
         return ''.join(cmdline)
+
 
 
     @staticmethod
@@ -1341,7 +1374,6 @@ class ascii_table(object):
     def __init__(self, str):
         self.titles, self.rows = self.__construct(str)
 
-
     def __construct(self, str):
         column_titles = None
         rows = []
@@ -1352,6 +1384,7 @@ class ascii_table(object):
                     column_titles = [rw.split()[0] for rw in row]
                 else:
                     rows.append(row)
+
         Row = namedtuple('Row', column_titles)
         rows = map(Row._make, rows)
         return column_titles, rows
@@ -1538,4 +1571,109 @@ class debug(object):
             return debug.save.file(src, dst)
 
 
+class MemorizedMapping(collections.MutableMapping,dict):
+    class AmbiguousMapping(Exception):
+        pass
 
+    class EmptyResultForKey(Exception):
+        pass
+
+    def __init__(self, restore_function=None,store_function=None, **kwargs):
+        self.__rst_fcn = restore_function
+        self.__store_fcn = store_function
+        super(MemorizedMapping, self).__init__(**kwargs)
+
+    def __getitem__(self,key):
+        if not self.__contains__(key) and self.__rst_fcn is not None:
+            items = self.__rst_fcn(key)
+            if len(items) > 1:
+                raise MemorizedMapping.AmbiguousMapping(items)
+            elif not len(items):
+                raise MemorizedMapping.EmptyResultForKey(key)
+            else:
+                self[key] = items[0]
+
+        return dict.__getitem__(self,key)
+
+    def __setitem__(self, key, value):
+        if self.__store_fcn is not None:
+            self.__store_fcn(key, value)
+
+        dict.__setitem__(self,key,value)
+
+    def __delitem__(self, key):
+        dict.__delitem__(self,key)
+
+    def __iter__(self):
+        return dict.__iter__(self)
+
+    def __len__(self):
+        return dict.__len__(self)
+
+    def __contains__(self, x):
+        return dict.__contains__(self,x)
+
+
+class translate(object):
+    @classmethod
+    def register(cls, name, restore_function=None, store_function=None):
+        """
+        Register property 'name' which acts as mapping of keys and values:
+        translate.name[key] -> value
+        if key is not found for dictionary name name, then
+        it is tried to be resolved by callng mapping_function(key).
+        mapping_function(key) -> [value1, value2, ...]
+        If value is not unique for key, then exception is raised. The same happens if list is empty
+        """
+        setattr(cls, name, MemorizedMapping(restore_function=restore_function, store_function=store_function))
+
+    @classmethod
+    def unregister(cls, name):
+        delattr(cls, name)
+
+class SerializeMapping(object):
+    @staticmethod
+    def mapping_file(mapping_name):
+        return os.path.join(debug.current_bunch_path(), mapping_name + '.map')
+
+    @staticmethod
+    def restore_fcn(mapping_name):
+        filename = SerializeMapping.mapping_file(mapping_name)
+        def restore_fcn(key):
+            if os.path.exists(filename):
+                with open(filename, 'r') as map_file:
+                    mapping = yaml.load(map_file)
+                    return [mapping[key]]
+            else:
+                return []
+        return restore_fcn
+
+    @staticmethod
+    def store_fcn(mapping_name):
+        filename = SerializeMapping.mapping_file(mapping_name)
+        def store_fcn(key, value):
+            mapping = {}
+            if os.path.exists(filename):
+                with open(filename, 'r') as map_file:
+                    mapping = yaml.load(map_file)
+            mapping[key] = value
+            with open(filename, 'w') as map_file:
+                map_file.write(yaml.dump(mapping, default_flow_style=False))
+
+        return store_fcn
+
+#translate.register('instances', restore_function=nova_cli.get_instance_id_list)
+translate.register('instances',
+    restore_function=SerializeMapping.restore_fcn('instances'),
+    store_function=SerializeMapping.store_fcn('instances'))
+#translate.register('volumes', restore_function=nova_cli.get_volume_id_list)
+translate.register('volumes',
+    restore_function=SerializeMapping.restore_fcn('volumes'),
+    store_function=SerializeMapping.store_fcn('volumes'))
+translate.register('floating',
+    restore_function=SerializeMapping.restore_fcn('floating'),
+    store_function=SerializeMapping.store_fcn('floating'))
+
+world.instances = translate.instances
+world.volumes = translate.volumes
+world.floating = translate.floating

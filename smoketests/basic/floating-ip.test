@@ -1,24 +1,7 @@
-Feature: Add pool of external IP's
-    In order to have test floating IP feature
+Feature: Allocate external IP and associate with instance,
+    In order to test floating IP feature
     As tester
-    I want to Add pool of external IP's using nova-manage
-
-    Scenario: Workaround for dnsmasq hang up
-        I run commands:
-        |  Command                            | Expected |
-        |  sudo killall dnsmasq \|\| echo     |  noFail  |
-        |  sudo service nova-network restart  |  noFail  |
-
-
-    Scenario: Register pool of external IPs
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        When I add pool of external IP addresses "{{cc_external_network}}"
-        Then I see pool of external IP addresses "{{cc_external_network}}" exist
-
-#Feature: Allocate external IP and associate with instance,
-#    In order to test floating IP feature
-#    As tester
-#    I want to associate external IP with instance
+    I want to associate external IP with instance
 
 
     Scenario: Allocate external IP
@@ -53,47 +36,3 @@ Feature: Add pool of external IP's
             |  Command                                                         | Expected  |
             |  sudo iptables -I OUTPUT -p icmp -j ACCEPT                       | noFail    |
         Then address "{{floating.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-
-
-
-
-## CLEAN AFTER TEST ----------------------
-
-    Scenario: De-associate IP from instance
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        And I see address "{{floating.name}}" associated with instance "{{vm.name}}"
-        When I de-associate address "{{floating.name}}" from instance "{{vm.name}}"
-        Then I see address "{{floating.name}}" not associated with instance "{{vm.name}}"
-        And I see address "{{floating.name}}" allocated
-
-
-    Scenario: De-Allocate external IP
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        And I see address "{{floating.name}}" allocated
-        When I de-allocate address "{{floating.name}}"
-        Then I see address "{{floating.name}}" not allocated
-
-
-    Scenario: Stop instance
-        Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
-        When I stop VM instance "{{vm.name}}"
-        Then VM instance "{{vm.name}}" is stopped within "{{vm.boot_timeout}}" seconds
-
-    Scenario: Undo system changes
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        When I run commands:
-            |  Command                                                         | Expected  |
-            |  sudo iptables -D OUTPUT -p icmp -j ACCEPT                       | noFail    |
-        Then commands are executed without errors
-
-#Feature: Remove pool of external IP's
-#    In order to clean after test of floating IP feature
-#    As tester
-#    I want to remove pool of external IP's using nova-manage
-
-
-    Scenario: Deregister pool of external IPs
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
-        And I see pool of external IP addresses "{{cc_external_network}}" exist
-        When I remove pool of external IP addresses "{{cc_external_network}}"
-        Then I see pool of external IP addresses "{{cc_external_network}}" does not exist

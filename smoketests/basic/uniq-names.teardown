@@ -1,0 +1,11 @@
+Feature: Clean-up after uniq names feature test
+    In order to smoke test OpenStack build
+    As tester
+    I want to clean-up after uniq names feature test
+
+    Scenario: Stop instances
+        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        When I stop VM instance "{{vm2.name}}"
+        And I stop VM instance "{{vm2.name}}"
+        Then VM instance "{{vm2.name}}" is stopped within "{{vm.boot_timeout}}" seconds
+        And VM instance "{{vm2.name}}" is stopped within "{{vm.boot_timeout}}" seconds

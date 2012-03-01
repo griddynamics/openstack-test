@@ -1,0 +1,27 @@
+Feature: Change uniq-names flag and check it works
+    In order to smoke test OpenStack build
+    As tester
+
+    Scenario: Enable uniq names flag in nova.conf
+        Then every service is running:
+                                      | ServiceName   |
+                                      {% for service in openstack_services %}
+                                      | {{ service }} |
+                                      {% endfor %}
+        When I change flag file "{{nova.conf_file}}" by setting flag values:
+                                      |     Name             | Value |
+                                      | --project_uniq_names | true  |
+        And I restart services:
+                                      |     ServiceName    |
+                                      {% for service in openstack_services %}
+                                      | {{service}}        |
+                                      {% endfor %}
+
+
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+            |  Command                            | Expected  |
+            |  sudo killall dnsmasq \|\| echo     |  noFail  |
+            |  sudo service nova-network restart  |  noFail  |
+
+

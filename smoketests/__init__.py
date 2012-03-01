@@ -5,6 +5,7 @@ from utils import onfailure
 import os
 import lettuce_bunch.special
 import conf
+import time
 
 dir_path = conf.get_current_module_path(__file__)
 
@@ -23,6 +24,7 @@ mysql_admin_pwd = config['db']['admin_pwd']
 class step_assert(object):
     def __init__(self, step):
         self.step = step
+        conf.log(conf.get_bash_log_file(),"asserting in step: %s" % step.sentence)
 
     def assert_equals(self, expr1, expr2, Msg=None):
         msg = 'Step "%s" failed ' % self.step.sentence
