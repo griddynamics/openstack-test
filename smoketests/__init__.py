@@ -3,7 +3,7 @@ from nose.tools import assert_equals, assert_true, assert_false
 import utils
 from utils import onfailure
 import os
-import bunch.special
+import lettuce_bunch.special
 import conf
 
 dir_path = conf.get_current_module_path(__file__)
