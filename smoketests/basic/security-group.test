@@ -68,25 +68,25 @@ Feature: Change nova config to enable security groups
         And I see security group "{{sg2.name}}" exist
         And I see security group "{{sg3.name}}" exist
 
-        When I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group ""
-        And I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}"
-        And I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg2.name}}"
-        And I add rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg3.name}}"
+        When I add rule allow from group "", protocol "tcp", host "{{network.cc_cidr}}" to access port "22" in group ""
+        And I add rule allow from group "", protocol "tcp", host "{{network.cc_cidr}}" to access port "22" in group "{{sg.name}}"
+        And I add rule allow from group "", protocol "tcp", host "{{network.cc_cidr}}" to access port "22" in group "{{sg2.name}}"
+        And I add rule allow from group "", protocol "tcp", host "{{network.cc_cidr}}" to access port "22" in group "{{sg3.name}}"
 
-        And I add rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group ""
-        And I add rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg.name}}"
-        And I add rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg2.name}}"
-        And I add rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg3.name}}"
+        And I add rule allow from group "", protocol "icmp", host "{{network.cc_cidr}}" to access port "" in group ""
+        And I add rule allow from group "", protocol "icmp", host "{{network.cc_cidr}}" to access port "" in group "{{sg.name}}"
+        And I add rule allow from group "", protocol "icmp", host "{{network.cc_cidr}}" to access port "" in group "{{sg2.name}}"
+        And I add rule allow from group "", protocol "icmp", host "{{network.cc_cidr}}" to access port "" in group "{{sg3.name}}"
 
-        Then I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "" exist
-        And I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}" exist
-        And I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg2.name}}" exist
-        And I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg3.name}}" exist
+        Then I see rule allow from group "", protocol "tcp", host "{{network.cc_cidr}}" to access port "22" in group "" exist
+        And I see rule allow from group "", protocol "tcp", host "{{network.cc_cidr}}" to access port "22" in group "{{sg.name}}" exist
+        And I see rule allow from group "", protocol "tcp", host "{{network.cc_cidr}}" to access port "22" in group "{{sg2.name}}" exist
+        And I see rule allow from group "", protocol "tcp", host "{{network.cc_cidr}}" to access port "22" in group "{{sg3.name}}" exist
 
-        And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "" exist
-        And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg.name}}" exist
-        And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg2.name}}" exist
-        And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "{{sg3.name}}" exist
+        And I see rule allow from group "", protocol "icmp", host "{{network.cc_cidr}}" to access port "" in group "" exist
+        And I see rule allow from group "", protocol "icmp", host "{{network.cc_cidr}}" to access port "" in group "{{sg.name}}" exist
+        And I see rule allow from group "", protocol "icmp", host "{{network.cc_cidr}}" to access port "" in group "{{sg2.name}}" exist
+        And I see rule allow from group "", protocol "icmp", host "{{network.cc_cidr}}" to access port "" in group "{{sg3.name}}" exist
 
     Scenario: Workaround for dnsmasq hang up
         I run commands:
@@ -173,7 +173,7 @@ Feature: Change nova config to enable security groups
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available
         And I see security group "{{sg2.name}}" exist
         And I see security group "{{sg3.name}}" exist
-        When I remove rule allow from group "{{sg2.name}}", protocol "", host "" to access port "" in group "{{sg3.name}}"
+        When I remove rule allow from group "{{sg2.name}}", protocol "", host "{{network.cidr}}" to access port "" in group "{{sg3.name}}"
         Then I see rule allow from group "{{sg2.name}}", protocol "", host "" to access port "" in group "{{sg3.name}}" does not exist
 
 # Clear -------------------------
@@ -196,16 +196,16 @@ Feature: Change nova config to enable security groups
         And I see security group "{{sg.name}}" exist
         And I see security group "{{sg2.name}}" exist
         And I see security group "{{sg3.name}}" exist
-        When I remove rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group ""
-        And I remove rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group ""
-        Then I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "" does not exist
-        And I see rule allow from group "", protocol "icmp", host "{{network.cc}}" to access port "" in group "" does not exist
+        When I remove rule allow from group "", protocol "tcp", host "{{network.cc_cidr}}" to access port "22" in group ""
+        And I remove rule allow from group "", protocol "icmp", host "{{network.cc_cidr}}" to access port "" in group ""
+        Then I see rule allow from group "", protocol "tcp", host "{{network.cc_cidr}}" to access port "22" in group "" does not exist
+        And I see rule allow from group "", protocol "icmp", host "{{network.cc_cidr}}" to access port "" in group "" does not exist
 
 
 #    Scenario: Remove general rule
-#        Given I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}" exist
-#        When I remove rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}"
-#        Then I see rule allow from group "", protocol "tcp", host "{{network.cc}}" to access port "22" in group "{{sg.name}}" does not exist
+#        Given I see rule allow from group "", protocol "tcp", host "" to access port "22" in group "{{sg.name}}" exist
+#        When I remove rule allow from group "", protocol "tcp", host "" to access port "22" in group "{{sg.name}}"
+#        Then I see rule allow from group "", protocol "tcp", host "" to access port "22" in group "{{sg.name}}" does not exist
 
     Scenario: Remove security groups
         Given novarc for project "{{project.name}}", user "{{user.name}}" is available

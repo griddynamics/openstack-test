@@ -22,8 +22,8 @@ world.volumes = {}
 world.floating = {}
 world.novarc = {}
 
-timeout=60
-poll_interval=5
+DEFAULT_TIMEOUT=60
+DEFAULT_POLL_INTERVAL=5
 
 
 DEFAULT_FIXTURE = [
@@ -46,7 +46,7 @@ ENDPOINT_TEMPLATES = {
       "identity": ('http://%host%:5000/v2.0', 'http://%host%:35357/v2.0', 'http://%host%:5000/v2.0', '1', '1'),
 }
 
-def wait(timeout=timeout, poll_interval=poll_interval):
+def wait(timeout=DEFAULT_TIMEOUT, poll_interval=DEFAULT_POLL_INTERVAL):
     def decorate(fcn):
         def f_retry(*args, **kwargs):
             time_left = timeout
@@ -811,26 +811,21 @@ class nova_cli(object):
         return False
 
     @staticmethod
-#    @wait - TODO
     def wait_instance_comes_up(name, timeout):
-        poll_interval = 5
-        time_left = int(timeout)
-        status = ""
-        while time_left > 0:
-            status =  nova_cli.get_instance_status(name).upper()
-            if status != 'ACTIVE':
-                time.sleep(poll_interval)
-                time_left -= poll_interval
-            else:
-                break
-        return status == 'ACTIVE'
+        @wait(timeout=timeout)
+        def polling_function(name):
+            return nova_cli.get_instance_status(name).upper() == 'ACTIVE'
+        return polling_function(name)
+
 
     @staticmethod
-    @wait()
     def wait_instance_stopped(name, timeout):
-        if not nova_cli.get_instance_status(name):
-            return True
-        return False
+        @wait(timeout=timeout)
+        def polling_function(name):
+            if not nova_cli.get_instance_status(name):
+                return True
+            return False
+        return polling_function(name)
 
     @staticmethod
     def billed_objects(project, min_instances, min_images):
@@ -1351,20 +1346,19 @@ class networking(object):
     class icmp(object):
         @staticmethod
         def probe(ip, timeout):
-            start_time = datetime.now()
-            while (datetime.now() - start_time).seconds < int(timeout):
-                if bash("ping -c3 %s" % ip).successful():
-                    return True
-            return False
+            @wait(timeout=timeout)
+            def polling_function(ip):
+                return bash("ping -c3 %s" % ip).successful()
+            return polling_function(ip)
 
     class nmap(object):
         @staticmethod
         def open_port_serves_protocol(host, port, proto, timeout):
-            start_time = datetime.now()
-            while(datetime.now() - start_time).seconds < int(timeout):
-                if bash('nmap -PN -p %s --open -sV %s | ' \
-                        'grep -iE "open.*%s"' % (port, host, proto)).successful():
-                    return True
+            @wait(timeout=timeout)
+            def polling_function(host, port, proto):
+                return bash('nmap -PN -p %s --open -sV %s | '\
+                            'grep -iE "open.*%s"' % (port, host, proto)).successful()
+            return polling_function(host,port, proto)
 
     class ifconfig(object):
         @staticmethod

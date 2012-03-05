@@ -18,7 +18,7 @@ Prefix:		%{_prefix}
 BuildArch:      noarch
 
 BuildRequires:	python-setuptools coreutils
-Requires:	python-bunch
+Requires:	python-lettuce-bunch
 
 %description
 Test harness for OpenStack written for Bunch tool
