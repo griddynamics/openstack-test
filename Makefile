@@ -14,8 +14,8 @@ install: clean
 #	install -m 0755	-d  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/flip
 #	install -m 0755 -t  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/flip smoketests/flip/*
 #
-#	install -m 0755	-d  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/keystone
-#	install -m 0755 -t  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/keystone smoketests/keystone/*
+	install -m 0755	-d  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/keystone
+	install -m 0755 -t  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/keystone smoketests/keystone/*
 #
 #	install -m 0755	-d  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/secgroup
 #	install -m 0755 -t  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/secgroup smoketests/secgroup/*
