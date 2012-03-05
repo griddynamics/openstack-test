@@ -1,0 +1,68 @@
+Feature: Setup keystone on installed OpenStack
+    In order to prepare environment for smoke test
+    As root
+    I want to setup keystone
+
+    Scenario: Install keystone
+        Given every RPM package is installed:
+            | PackageName        |
+            {% for package in packages_to_install %}
+            | {{ package }}      |
+            {% endfor %}
+        And every RPM package available:
+            | PackageName        |
+            | openstack-keystone |
+        When I install RPM package(s):
+            | PackageName        |
+            | openstack-keystone |
+        Then every RPM package is installed:
+            | PackageName        |
+            | openstack-keystone |
+
+
+    Scenario: Setup nova and glance to use keystone
+        Given every RPM package is installed:
+            | PackageName        |
+            | openstack-keystone |
+
+#        When I change flag file "{{glance.api_conf}}" by setting flag values:
+#            | Name               | Value                                                 |
+#            | pipeline         | versionnegotiation authtoken auth-context apiv1app    |
+
+#        And I change flag file "{{glance.registry_conf}}" by setting flag values:
+#            | Name               | Value                                  |
+#            | pipeline         |  authtoken auth-context registryapp    |
+
+        And I run commands:
+            |  Command                                                         | Expected  |
+            |  sudo sed -i 's/pipeline = versionnegotiation context apiv1app/pipeline = versionnegotiation authtoken auth-context apiv1app/' "{{glance.api_conf}}"  |  noFail  |
+            |  sudo sed -i 's/pipeline = context registryapp/pipeline = authtoken auth-context registryapp/' "{{glance.registry_conf}}"  |  noFail  |
+            |  sudo mv -f /etc/nova/api-paste.ini /etc/nova/api-paste.ini.wokeystone  | noFail    |
+            |  sudo dd if=/etc/keystone/nova-api-paste.ini of=/etc/nova/api-paste.ini  | noFail    |
+            |  sudo sed -i 's/999888777666/{{keystone.token}}/' "{{nova.api_conf}}"  |  noFail  |
+            |  sudo sed -i 's/999888777666/{{keystone.token}}/' "{{glance.api_conf}}"  |  noFail  |
+            |  sudo sed -i 's/999888777666/{{keystone.token}}/' "{{glance.registry_conf}}"  |  noFail  |
+
+        And I init keystone db for IP "{{keystone.cc}}", admin "{{keystone.admin}}", password "{{keystone.admin_password}}", project "{{keystone.tenant}}", token "{{keystone.token}}", region "{{keystone.region}}"
+
+        And I start services:
+            | ServiceName        |
+            | keystone |
+        And I restart services:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+        And every service is running:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+            | keystone |
+
+    Scenario: Workaround for dnsmasq hang up
+        I run commands:
+            |  Command                            | Expected |
+            |  sudo killall dnsmasq \|\| echo     |  noFail  |
+            |  sudo service nova-network restart  |  noFail  |
+

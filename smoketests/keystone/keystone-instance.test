@@ -1,0 +1,26 @@
+Feature: Check keystone service
+    In order to smoke test keystone functionality
+    As root
+    I want to create user, tenant, endpoints in keystone
+
+    Scenario: Setup prerequisites
+#            Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys"
+            Require setup "single-node ! keystone-init ! keystone-user ! novaclient-network ! novarc-keystone ! novaclient-images ! novaclient-keys"
+
+    Scenario: Start single instance and bind with pre-uploaded keypair
+        Given novarc is available
+        And VM image "{{image.name}}" is registered
+        And keypair with name "{{vm.keypair.name}}" exists
+        When I start VM instance "{{vm.name}}" using image "{{image.name}}",  flavor "{{vm.flavor}}" and keypair "{{vm.keypair.name}}"
+        Then VM instance "{{vm.name}}" comes up within "{{vm.boot_timeout}}" seconds
+        And VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        And I see that "ssh" port of VM instance "{{vm.name}}" is open and serves "ssh" protocol within "{{vm.ssh_deadline}}" seconds
+        And I can log into VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}"
+        And I login to VM "{{vm.name}}" via SSH as "{{vm.user}}" with key "{{vm.keypair.private}}" and run commands:
+            |  Command  |   Expected  |
+            |   whoami  |   root      |
+
+    Scenario: Stop instance
+        Given VM instance "{{vm.name}}" is pingable within "{{vm.ping_deadline}}" seconds
+        When I stop VM instance "{{vm.name}}"
+        Then VM instance "{{vm.name}}" is stopped within "{{vm.boot_timeout}}" seconds

@@ -225,16 +225,39 @@ def create_nova_network_by_params(step):
 def nova_network_exists(step, cidr):
     step_assert(step).assert_true(utils.nova_cli.network_exists(cidr))
 
+@step(u'I get EC2 keys for project "(.*?)", user "(.*?)"')
+def export_ec2_keys(step, project, user):
+    step_assert(step).assert_true(utils.nova_manage.export_ec2_keys(project, user, bunch_working_dir))
+
+@step(u'I generate novarc file using parameters:')
+def generate_novarc(step):
+    env = {}
+    for data in step.hashes:
+        if 'ResultDir' in data['Value']:
+            data['Value'] = data['Value'].replace('ResultDir',bunch_working_dir)
+        env[data['Parameter']] = data['Value']
+    step_assert(step).assert_true(utils.novarc.generate(env, bunch_working_dir))
+
+@step(u'I forget novarc')
+def forget_novarc(step):
+    step_assert(step).assert_true(utils.novarc.forget(bunch_working_dir))
+
+@step(u'novarc is available')
+def check_novarc_available(step):
+    step_assert(step).assert_true(utils.novarc.available(bunch_working_dir))
+
+@step(u'novarc is not available')
+def check_novarc_not_available(step):
+    step_assert(step).assert_false(utils.novarc.available(bunch_working_dir))
+
 @step(u'novarc for project "(.*?)", user "(.*?)" is available')
 def novarc_is_available(step, project, user):
-    utils.nova_cli.set_novarc(project, user, None, bunch_working_dir)
-    step_assert(step).assert_true(utils.nova_cli.novarc_available())
+    step_assert(step).assert_true(utils.novarc.available(bunch_working_dir))
 
-@step(u'novarc for project "(.*?)", user "(.*?)", password "(.*?)" is available')
-def novarc_is_available_ks(step, project, user, password):
-    utils.nova_cli.set_novarc(project, user, password, bunch_working_dir)
-    step_assert(step).assert_true(utils.nova_cli.novarc_available())
 
+@step(u'novarc for project "(.*?)", user "(.*?)", password "(.*?)", region "(.*?)" is available')
+def novarc_is_available_ks(step, project, user, password, region):
+    step_assert(step).assert_true(utils.novarc.available(bunch_working_dir))
 
 @step(u'VM image tarball is available at "(.*?)"')
 def http_resource_is_availaable(step, url):
@@ -251,14 +274,19 @@ def download_tarball(step, url):
     step_assert(step).assert_true(utils.networking.http.get(url, bunch_working_dir))
 
 @step(u'using glance I register VM image "(.*?)" for owner "(.*?)" using disk "(.*?)", ram "(.*?)", kernel "(.*?)"')
-def register_all_images(step, name, owner, disk, ram, kernel):
+def register_images_glance(step, name, owner, disk, ram, kernel):
     step_assert(step).assert_true(utils.glance_cli.vm_image_register(name, owner,
                                                                     os.path.join(bunch_working_dir,disk),
                                                                     os.path.join(bunch_working_dir,ram),
                                                                     os.path.join(bunch_working_dir, kernel)))
 
+@step(u'using glance I register VM image "(.*?)" for owner "(.*?)" using disk "(.*?)"')
+def register_images_glance(step, name, owner, disk):
+    step_assert(step).assert_true(utils.glance_cli.vm_image_register_single(name, owner,
+                                                                    os.path.join(bunch_working_dir,disk)))
+
 @step(u'using nova-manage I register VM image "(.*?)" for owner "(.*?)" using disk "(.*?)", ram "(.*?)", kernel "(.*?)"')
-def register_all_images(step, name, owner, disk, ram, kernel):
+def register_images_nova_manage(step, name, owner, disk, ram, kernel):
     step_assert(step).assert_true(utils.nova_manage.vm_image_register(name, owner, os.path.join(bunch_working_dir, disk),
                                                                     os.path.join(bunch_working_dir,ram),
                                                                     os.path.join(bunch_working_dir, kernel)))
@@ -557,30 +585,33 @@ def keystone_init_db(step, host, user, password, project, token, region):
 def keystone_setup_middleware(step):
     step_assert(step).assert_true(utils.keystone.setup_middleware())
 
-@step(u' I create keystone user "(.*?)" with password "(.*?)" in tenant "(.*?)"')
+@step(u'I create keystone user "(.*?)" with password "(.*?)" in tenant "(.*?)"')
 def keystone_create_user(step, user, password, tenant):
     step_assert(step).assert_true(utils.keystone_manage.create_user(user, password, tenant))
 
-@step(u' I see keystone user "(.*?)" exist')
+@step(u'I see keystone user "(.*?)" exist')
 def keystone_user_exist(step, user):
     step_assert(step).assert_true(utils.keystone_manage.check_user_exist(user))
 
-@step(u' I grant role "(.*?)" for keystone user "(.*?)"')
-def keystone_grant_role(step, role, user):
-    step_assert(step).assert_true(utils.keystone_manage.grant_role(role, user))
+@step(u'I grant role "(.*?)" for keystone user "(.*?)" in tenant "(.*?)"')
+def keystone_grant_role(step, role, user, tenant):
+    step_assert(step).assert_true(utils.keystone_manage.grant_role(role, user, tenant))
 
-@step(u' I see role "(.*?)" granted for keystone user "(.*?)"')
-def keystone_check_grant_role(step, role, user):
-    step_assert(step).assert_true(utils.keystone_manage.check_role_granted(role, user))
+@step(u'I see role "(.*?)" granted for keystone user "(.*?)" in tenant "(.*?)"')
+def keystone_check_grant_role(step, role, user, tenant):
+    step_assert(step).assert_true(utils.keystone_manage.check_role_granted(role, user, tenant))
 
-@step(u' I create token "(.*?)" for keystone user "(.*?)" in tenant "(.*?)"')
+@step(u'I create token "(.*?)" for keystone user "(.*?)" in tenant "(.*?)"')
 def keystone_create_token(step, token, user, tenant):
     step_assert(step).assert_true(utils.keystone_manage.add_token(user, tenant, token))
 
-@step(u' I see token "(.*?)" for keystone user "(.*?)" in tenant "(.*?)" exist')
+@step(u'I see token "(.*?)" for keystone user "(.*?)" in tenant "(.*?)" exist')
 def keystone_check_token_exist(step, token, user, tenant):
     step_assert(step).assert_true(utils.keystone_manage.check_token_exist(user, tenant,token ))
 
+@step(u'I add credential for keystone user "(.*?)", tenant "(.*?)" to use "(.*?)" service using key "(.*?)" and secrete "(.*?)"')
+def keystone_add_credential(step, user, tenant, service, key, secrete):
+    step_assert(step).assert_true(utils.keystone_manage.add_credential(user, tenant, service, key, secrete))
 
 
 

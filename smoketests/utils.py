@@ -20,6 +20,7 @@ world.instances = {}
 world.images = {}
 world.volumes = {}
 world.floating = {}
+world.novarc = {}
 
 timeout=60
 poll_interval=5
@@ -367,53 +368,54 @@ class FlagFile(object):
         return EscalatePermissions.overwrite(filename, self)
 
 class novarc(dict):
-    def __init__(self):
-        super(novarc,self).__init__()
-
-    def load(self, file):
-        self.file = file
+    @staticmethod
+    def load(file):
+        novarc.file = file
         return os.path.exists(file)
 
-    def source(self):
-        return "source %s" % self.file
-
-    def bash(self, cmd):
-        return bash('source %s && %s' % (self.file, cmd))
+    @staticmethod
+    def source():
+        return "source %s" % novarc.file
 
     @staticmethod
-    def from_zipfile(project, user, destination):
-        path = os.path.join(destination, 'novarc.zip')
-        out = bash('sudo nova-manage project zipfile %s %s %s' % (project, user, path))
-        if out.successful():
-            out = bash("unzip -uo %s -d %s" % (path,destination))
-            new_novarc = novarc()
-            if out.successful() and new_novarc.load(os.path.join(destination, 'novarc')):
-                return new_novarc
-        return None
+    def bash(cmd):
+        return bash('source %s && %s' % (novarc.file, cmd))
+
+#    @staticmethod
+#    def create(project, user, password, destination, region):
+#        if novarc.load(os.path.join(destination, 'novarc')):
+#            return novarc
+#        return None
 
     @staticmethod
-    def from_template(project, user, password, destination):
-        new_novarc = novarc()
-        path = os.path.join(destination, "novarc.template")
+    def generate(env, destination):
+        novarc_path = os.path.join(destination, "novarc")
+        novarc_text = ''
+        for name in env.iteritems():
+            world.novarc[name[0].strip()] = name[1].strip()
 
-        novarc_template = open(path, "rt").read()
-        novarc_text = novarc_template % {
-            "auth_url": "http://127.0.0.1:5000/v2.0",
-            "username": user,
-            "tenant_name": project,
-            "password": password}
-        novarc_path = os.path.join(destination, 'novarc')
+        for name in world.novarc.iteritems():
+            novarc_text += 'export {0}={1}\n'.format(name[0],name[1])
+
         open(novarc_path, "wt").write(novarc_text)
-        if new_novarc.load(novarc_path):
-            return new_novarc
-        return None
+
+        if novarc.load(os.path.join(destination, 'novarc')):
+            return True
+        return False
 
     @staticmethod
-    def create(project, user, password, destination):
-        if os.path.exists("/etc/keystone"):
-            return novarc.from_template(project, user, password, destination)
-        else:
-            return novarc.from_zipfile(project, user, destination)
+    def forget(destination):
+        for name in world.novarc.iteritems():
+            bash("unset %s" % name[0])
+        world.novarc = {}
+        return bash("rm -f %s" % os.path.join(destination, "novarc")).successful
+
+    @staticmethod
+    def available(destination):
+        if novarc.load(os.path.join(destination, 'novarc')):
+            return True
+        return False
+
 
 
         ##===================##
@@ -493,13 +495,16 @@ class keystone_manage(object):
         return out.successful()
 
     @staticmethod
-    def grant_role(role, user):
-        out = bash("sudo keystone-manage role grant %s %s" % (role,user))
+    def grant_role(role, user, tenant=None):
+        if tenant in (None,''):
+            out = bash("sudo keystone-manage role grant %s %s" % (role,user))
+        else:
+            out = bash("sudo keystone-manage role grant %s %s %s" % (role,user, tenant))
         return out.successful()
 
 #__ TODO __
     @staticmethod
-    def check_role_granted(role, user):
+    def check_role_granted(role, user, tenant=None):
         #out = bash("sudo keystone-manage role grant %s %s" % (role,user))
         return True
 
@@ -547,6 +552,16 @@ class keystone_manage(object):
         out = bash("sudo keystone-manage endpoint delete %s %s" % (tenant, template))
         return out.successful()
 
+    @staticmethod
+    def add_credential(user, tenant, service, key, secrete):
+        out = bash("sudo keystone-manage credentials add %s %s %s %s %s" % (user, service, key, secrete, tenant))
+        return out.successful()
+
+    def delete_credential(user, tenant, service, key, secrete):
+        out = bash("sudo keystone-manage credentials remove %s %s %s %s %s" % (user, service, key, secrete, tenant))
+        return out.successful()
+
+
 
 
         ##===============##
@@ -554,6 +569,27 @@ class keystone_manage(object):
         ##===============##
 
 class nova_manage(object):
+    @staticmethod
+    def get_zipfile(project, user, destination):
+        path = os.path.join(destination, 'novarc.zip')
+        out = bash('sudo nova-manage project zipfile %s %s %s' % (project, user, path))
+        destination = destination
+        if out.successful():
+            out = bash("unzip -uo %s -d %s" % (path,destination+"/novarc_zip"))
+            out = bash("cp -f %s/*.pem %s" % (destination+"/novarc_zip", destination))
+        return True
+
+    @staticmethod
+    def export_ec2_keys(project, user, destination):
+        out=bash('sudo nova-manage user exports --name %s' % user)
+        for line in out.output_text().split('\n'):
+            if 'export' in line:
+                line=line.split(' ')[1]
+                (parameter, value) = line.split('=')
+                world.novarc[parameter]=value
+        nova_manage.get_zipfile(project, user, destination)
+        return out.successful()
+
     @staticmethod
     def floating_add_pool(cidr):
         return bash('sudo nova-manage floating create %s' % cidr)
@@ -592,30 +628,10 @@ class nova_manage(object):
 
 
 class nova_cli(object):
-
-    __novarc = None
-
-    @staticmethod
-    def novarc_available():
-        return not (nova_cli.__novarc is None)
-
-    @staticmethod
-    def get_novarc_load_cmd():
-        if nova_cli.novarc_available():
-            return nova_cli.__novarc.source()
-
-        return "/bin/false"
-
-    @staticmethod
-    def set_novarc(project, user, password, destination):
-        if nova_cli.__novarc is None:
-            nova_cli.__novarc = novarc.create(project, user, password, destination)
-
-        return nova_cli.__novarc
-
     @staticmethod
     def create_admin(username):
         out = bash("sudo nova-manage user admin %s" % username)
+        #nova_manage.export_ec2_keys(username)
         return out.successful()
 
     @staticmethod
@@ -676,7 +692,11 @@ class nova_cli(object):
 
     @staticmethod
     def vm_image_registered(name):
-        return nova_cli.exec_novaclient_cmd('image-list | grep "%s"' % name)
+        text = nova_cli.get_novaclient_command_out('image-list')
+        if text:
+            table = ascii_table(text)
+            return table.select_values('ID','Name', name) is not None
+        return False
 
     @staticmethod
     def add_keypair(name, public_key=None):
@@ -699,15 +719,11 @@ class nova_cli(object):
 
     @staticmethod
     def get_image_id_list(name):
-        lines = nova_cli.get_novaclient_command_out("image-list | grep '%s\s' | awk '{print $2}'" % name)
-        id_list = lines.split(os.linesep)
-        return id_list
-
-#    @staticmethod
-#    def start_vm_instance(name, image_id, flavor_id, key_name=None):
-#        key_name_arg = "" if key_name is None else "--key_name %s" % key_name
-#        return nova_cli.exec_novaclient_cmd("boot %s --image %s --flavor %s %s" % (name, image_id, flavor_id, key_name_arg))
-
+        text = nova_cli.get_novaclient_command_out('image-list')
+        if text:
+            table = ascii_table(text)
+            return table.select_values('ID','Name', name)
+        return False
 
     @staticmethod
     def start_vm_instance(name, image_id, flavor_id, key_name=None, sec_groups=None):
@@ -755,28 +771,22 @@ class nova_cli(object):
 
     @staticmethod
     def exec_novaclient_cmd(cmd):
-        if nova_cli.novarc_available():
-            source = nova_cli.get_novarc_load_cmd()
-            out = bash('%s && nova %s' % (source, cmd))
-            return out.successful()
-        return False
+        return novarc.bash('nova %s' % cmd).successful()
 
     @staticmethod
     def get_novaclient_command_out(cmd):
-        if nova_cli.novarc_available():
-            source = nova_cli.get_novarc_load_cmd()
-            out = bash('%s && nova %s' % (source, cmd))
-            garbage_list = ['DeprecationWarning', 'import md5', 'import sha']
+        out = novarc.bash('nova %s' % cmd)
+        garbage_list = ['DeprecationWarning', 'import md5', 'import sha']
 
-            def does_not_contain_garbage(str_item):
-                for item in garbage_list:
-                    if item in str_item:
-                        return False
-                return True
+        def does_not_contain_garbage(str_item):
+            for item in garbage_list:
+                if item in str_item:
+                    return False
+            return True
 
-            lines_without_warning = filter(does_not_contain_garbage, out.output_text().split(os.linesep))
-            return string.join(lines_without_warning, os.linesep)
-        return ""
+        lines_without_warning = filter(does_not_contain_garbage, out.output_text().split(os.linesep))
+        return string.join(lines_without_warning, os.linesep)
+
 
     @staticmethod
     def get_instance_status(name):
@@ -893,7 +903,7 @@ class nova_cli(object):
 
 
 class euca_cli(object):
-    
+
     @staticmethod
     def _parse_rule(dst_group=None, source_group_user=None,source_group=None, proto=None, source_subnet=None, port=None):
         params={}
@@ -949,18 +959,22 @@ class euca_cli(object):
 
     @staticmethod
     def volume_create(name,size,zone='nova'):
-        source = nova_cli.get_novarc_load_cmd()
-        out = bash("%s && euca-create-volume --size %s --zone %s|grep VOLUME| awk '{print $2}'" % (source, size, zone))
+        out = novarc.bash("euca-create-volume --size %s --zone %s" % (size, zone))
+        euca_id=None
         if out:
-            euca_id = out.output_text().split()[0] 
-            world.volumes[name] = misc.get_nova_id(euca_id)
+            for line in out.output_text().split('\n'):
+                if 'VOLUME' in line:
+                    if not euca_id:
+                        euca_id = line.split()[1]
+                        world.volumes[name] = misc.get_nova_id(euca_id)
+                    else:
+                        return False
         return out.successful()
 
     @staticmethod
     def get_volume_status(volume_name):
-        source = nova_cli.get_novarc_load_cmd()
         volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
-        out = bash("%s && euca-describe-volumes |grep %s" % (source,volume_id)).output_text()
+        out = novarc.bash("euca-describe-volumes |grep %s" % volume_id).output_text()
 
         badchars=['(', ')', ',']
         for char in badchars:
@@ -990,10 +1004,9 @@ class euca_cli(object):
 
     @staticmethod
     def volume_attach(instance_name, dev, volume_name):
-        source = nova_cli.get_novarc_load_cmd()
         volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
         instance_id='i-'+misc.get_euca_id(nova_id=world.instances[instance_name])
-        out = bash('%s && euca-attach-volume --instance %s --device %s %s' % (source, instance_id, dev, volume_id))
+        out = novarc.bash('euca-attach-volume --instance %s --device %s %s' % (instance_id, dev, volume_id))
         return out.successful()
 
     @staticmethod
@@ -1008,9 +1021,8 @@ class euca_cli(object):
 
     @staticmethod
     def volume_detach(volume_name):
-        source = nova_cli.get_novarc_load_cmd()
         volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
-        out = bash('%s && euca-detach-volume %s' % (source,volume_id))
+        out = novarc.bash('euca-detach-volume %s' % volume_id)
         time.sleep(30)
         return out.successful()
 
@@ -1023,22 +1035,21 @@ class euca_cli(object):
 
     @staticmethod
     def volume_delete(volume_name):
-        source = nova_cli.get_novarc_load_cmd()
         volume_id='vol-'+misc.get_euca_id(nova_id=world.volumes[volume_name])
-        out = bash("%s && euca-delete-volume %s" % (source,volume_id))
+        out = novarc.bash("euca-delete-volume %s" % volume_id)
         return out.successful()
 
     @staticmethod
     def sgroup_add(group_name):
-        return bash('%s && euca-add-group -d smoketest-secgroup-test %s' % (nova_cli.get_novarc_load_cmd(),group_name)).successful()
+        return novarc.bash('euca-add-group -d smoketest-secgroup-test %s' % group_name).successful()
 
     @staticmethod
     def sgroup_delete(group_name):
-        return bash('%s && euca-delete-group %s' % (nova_cli.get_novarc_load_cmd(),group_name)).successful()
+        return novarc.bash('euca-delete-group %s' % group_name).successful()
 
     @staticmethod
     def sgroup_check(group_name):
-        out = bash("%s && euca-describe-groups %s |grep GROUP |awk '{print $3}'" % (nova_cli.get_novarc_load_cmd(),group_name)).output_text()
+        out = novarc.bash("euca-describe-groups %s |grep GROUP |awk '{print $3}'" % group_name).output_text()
         if group_name in out:
             return True
         return False
@@ -1046,17 +1057,17 @@ class euca_cli(object):
     @staticmethod
     def sgroup_add_rule(dst_group='', src_group='', src_proto='', src_host='', dst_port=''):
         params = euca_cli._parse_rule(dst_group, '', src_group, src_proto, src_host, dst_port)
-        return bash('%s && euca-authorize %s' % (nova_cli.get_novarc_load_cmd(),params)).successful()
+        return novarc.bash('euca-authorize %s' % params).successful()
 
     @staticmethod
     def sgroup_del_rule(dst_group='', src_group='', src_proto='', src_host='', dst_port=''):
         params = euca_cli._parse_rule(dst_group, '', src_group, src_proto, src_host, dst_port)
-        return bash('%s && euca-revoke %s' % (nova_cli.get_novarc_load_cmd(),params)).successful()
+        return novarc.bash('euca-revoke %s' % params).successful()
 
 
     @staticmethod
     def sgroup_check_rule_exist(dst_group='', src_group='', src_proto='', src_host='', dst_port=''):
-        out=bash('%s && euca-describe-groups %s|grep PERMISSION' % (nova_cli.get_novarc_load_cmd(),dst_group)).output_text()
+        out=novarc.bash('euca-describe-groups %s|grep PERMISSION' % dst_group).output_text()
         rule = euca_cli._parse_rule(dst_group, '', src_group, src_proto, src_host, dst_port)
 #        print "Searching: "+rule
 
@@ -1101,10 +1112,10 @@ class euca_cli(object):
 
 
 class glance_cli(object):
+
     @staticmethod
     def glance_add(image_file, format, **kwargs):
-#        out = nova_cli.__novarc.bash(
-        out = bash(
+        out = novarc.bash(
             'glance add disk_format=%s container_format=%s is_public=True %s < "%s"'
             % (format,
                format,
@@ -1126,6 +1137,15 @@ class glance_cli(object):
             return False
         rootfs_id = glance_cli.glance_add(
             kernel, "ami", name=image_name, kernel_id=kernel_id, ramdisk_id=ramdisk_id)
+        return rootfs_id is not None
+
+
+    @staticmethod
+    def vm_image_register_single(image_name, owner, image_file):
+        out = novarc.bash('glance add disk_format=raw is_public=True name=%s < "%s"'
+            % (image_name, image_file))
+
+        rootfs_id = int(out.output_text().split(':')[1])
         return rootfs_id is not None
 
 
@@ -1240,10 +1260,6 @@ class ascii_table(object):
                     column_titles = [rw.split()[0] for rw in row]
                 else:
                     rows.append(row)
-#        print "rows:"
-#        print rows
-#        print "tit:"
-#        print column_titles
         Row = namedtuple('Row', column_titles)
         rows = map(Row._make, rows)
         return column_titles, rows
@@ -1426,10 +1442,6 @@ class debug(object):
             dst = os.path.basename(src)
             dst = os.path.join(debug.current_bunch_path(), dst if os.path.splitext(dst)[1] == '.log' else dst + ".log")
             return debug.save.file(src, dst)
-
-
-
-
 
 
 

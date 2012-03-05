@@ -1,0 +1,37 @@
+Feature: Create novarc file with all needed Auth info
+         In order to prepare environment for smoke test
+         As cloud admin
+
+    Scenario: Create novarc
+        Given every service is running:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+
+        When I get EC2 keys for project "{{project.name}}", user "{{user.name}}"
+        And I generate novarc file using parameters:
+            |  Parameter          |              Value                  |
+
+            |  NOVA_API_KEY       |  "{{user.name}}"                    |
+            |  NOVA_USERNAME      |  "{{user.name}}"                    |
+            |  NOVA_PASSWORD      |  "{{user.password}}"                |
+            |  NOVA_PROJECT_ID    |  "{{project.name}}"                 |
+            |  NOVA_URL           |  "http://{{service.nova}}:8774/v1.1"|
+            |  NOVA_VERSION       |  "1.1"                              |
+            |  NOVA_REGION_NAME   |  "{{keystone.region}}"              |
+
+            |  EC2_URL            |  "http://{{service.nova}}:8773/services/Cloud" |
+            |  EC2_ACCESS_KEY     |  "{{user.name}}:{{project.name}}"   |
+#            |  EC2_SECRET_KEY     |  "{{user.password}}"                |  -  Should be added after adding user
+            |  S3_URL             |  "http://{{service.swift}}:3333"    |
+            |  EC2_PRIVATE_KEY    |  "ResultDir/pk.pem"                 |
+            |  EC2_CERT           |  "ResultDir/cert.pem"               |
+            |  NOVA_CERT          |  "ResultDir/cacert.pem"             |
+            |  EUCALYPTUS_CERT    |  "ResultDir/cacert.pem"             |
+
+        Then novarc is available
+        And novarc for project "{{project.name}}", user "{{user.name}}" is available
+        And novarc for project "{{project.name}}", user "{{user.name}}", password "{{keystone.admin_password}}", region "{{keystone.region}}" is available
+
+

@@ -1,0 +1,9 @@
+Feature: Remove novarc file to generate new one
+         In order to prepare environment for smoke test
+         As cloud admin
+         I want to clear enviroment created by novarc
+
+    Scenario: Remove novarc and all env supplied
+        Given novarc is available
+        When I forget novarc
+        Then novarc is not available

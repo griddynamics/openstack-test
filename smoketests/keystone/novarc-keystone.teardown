@@ -1,0 +1,8 @@
+Feature: Remove novarc file to generate new one
+         In order to prepare environment for smoke test
+         As cloud admin
+
+    Scenario: Create novarc
+        Given novarc is available
+        When I forget novarc
+        Then novarc is not available

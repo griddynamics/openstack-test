@@ -4,7 +4,7 @@ Feature: Create user and project using python-novaclient CLI
     I want to register images
 
 #    Scenario: Upload, unpack and register image from url
-#        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+#        Given novarc for project "{{project.name}}", user "{{user.name}}", password "{{keystone.admin_password}}", region "{{keystone.region}}" is available
 #        And VM image tarball is available at "{{image2.url}}"
 #        When I download VM image tarball at "{{image2.url}}" and unpack it
 ##        And using glance I register VM image "{{image2.name}}" for owner "{{user.name}}" using disk "{{image2.disk}}", ram "{{image2.ram}}", kernel "{{image2.kernel}}"
@@ -12,8 +12,9 @@ Feature: Create user and project using python-novaclient CLI
 #        Then VM image "{{image2.name}}" is registered
 
     Scenario: Upload and register solid images
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        Given novarc for project "{{project.name}}", user "{{user.name}}", password "{{keystone.admin_password}}", region "{{keystone.region}}" is available
         And VM image tarball is available at "{{image.url}}"
         When I download VM image tarball at "{{image.url}}"
-        And using nova-manage I register VM image "{{image.name}}" for owner "{{user.name}}" using disk "{{image.disk}}"
+#        And using nova-manage I register VM image "{{image.name}}" for owner "{{user.name}}" using disk "{{image.disk}}"
+        And using glance I register VM image "{{image.name}}" for owner "{{user.name}}" using disk "{{image.disk}}"
         Then VM image "{{image.name}}" is registered

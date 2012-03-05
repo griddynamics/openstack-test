@@ -1,6 +1,17 @@
 build_environment: 'master'
 yum_repository: 'openstack-rhel'
 
+server:
+  internal: &server 172.18.40.10
+  external: &ip 172.18.40.10
+
+# Global services addresses
+service:
+  nova: *server
+  keystone: *server
+  swift: *server
+  glance: *server
+
 cc_external_ip: 
   &cc_ip_value 172.18.40.10
 
@@ -37,6 +48,7 @@ network:
   nets: 1
   ips:  254
   cc: 172.30.252.1
+  cc_cidr: 172.30.252.1/32
 
 keystone:
   admin: *name

@@ -1,0 +1,30 @@
+Feature: Check keystone service
+    In order to smoke test keystone functionality
+    As root
+    I want to create user, tenant, endpoints in keystone
+
+
+    Scenario: Check user creating using keystone
+        Given every service is running:
+            | ServiceName   |
+            {% for service in openstack_services %}
+            | {{ service }} |
+            {% endfor %}
+            | keystone |
+        When I create keystone user "{{keystone.admin}}" with password "{{keystone.admin_password}}" in tenant "{{keystone.tenant}}"
+        Then I see keystone user "{{keystone.admin}}" exist
+
+    Scenario: Grant permission for keystone user
+        Given I see keystone user "{{keystone.admin}}" exist
+        When I grant role "Admin" for keystone user "{{keystone.admin}}" in tenant ""
+        And I grant role "Member" for keystone user "{{keystone.admin}}" in tenant "{{keystone.tenant}}"
+
+# TODO
+        Then I see role "Admin" granted for keystone user "{{keystone.admin}}" in tenant ""
+        And I see role "Member" granted for keystone user "{{keystone.admin}}" in tenant "{{keystone.tenant}}"
+
+    Scenario: Create token
+        Given I see keystone user "{{keystone.admin}}" exist
+        When I create token "{{keystone.token}}" for keystone user "{{keystone.admin}}" in tenant "{{keystone.tenant}}"
+        And I add credential for keystone user "{{keystone.admin}}", tenant "{{keystone.tenant}}" to use "EC2" service using key "{{keystone.admin}}:{{keystone.tenant}}" and secrete "{{keystone.admin_password}}"
+        Then I see token "{{keystone.token}}" for keystone user "{{keystone.admin}}" in tenant "{{keystone.tenant}}" exist

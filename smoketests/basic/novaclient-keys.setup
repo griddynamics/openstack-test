@@ -5,7 +5,7 @@ Feature: Register SSH keys using  python-novaclient CLI
 
 
     Scenario: Register existing keypair from file
-        Given novarc for project "{{project.name}}", user "{{user.name}}" is available
+        Given novarc is available
         When I generate keypair saving it to file "{{vm.keypair.private}}"
         And I add keypair with name "{{vm.keypair.name}}" from file "{{vm.keypair.public}}"
         Then keypair with name "{{vm.keypair.name}}" exists
