@@ -8,6 +8,13 @@ install: clean
 	install -m 0755	-d  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/basic
 	install -m 0755 -t  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/basic smoketests/basic/*
 
+
+	install -m 0755	-d  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/_setup
+	install -m 0755 -t  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/_setup smoketests/_setup/*
+
+	install -m 0755	-d  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/_remove
+	install -m 0755 -t  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/_remove smoketests/_remove/*
+
 #	install -m 0755	-d  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/flat-network
 #	install -m 0755 -t  ${DESTDIR}/usr/local/share/openstack-core-test/smoketests/flat-network smoketests/flat-network/*
 #
