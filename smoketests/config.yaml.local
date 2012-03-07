@@ -1,0 +1,283 @@
+build_environment: 'localtest'
+yum_repository: 'openstack-rhel'
+
+server: 
+    internal: &server 127.0.0.1
+    external: &ip 127.0.0.1
+
+# Global services addresses
+service:
+  nova: *server
+  keystone: *server
+  swift: *server
+  glance: *server
+
+
+cc_external_ip: 
+  &cc_ip_value 127.0.0.1
+
+cc_external_network: 172.30.254.0/28
+
+network_interface: eth0
+
+
+compute_nodes:
+ - localhost
+ - *cc_ip_value
+
+nova:
+  rpm_packages: openstack-nova-node-full
+  conf_file: /etc/nova/nova.conf
+  api_conf: /etc/nova/api-paste.ini
+
+db:
+  admin: root
+  admin_pwd: nova
+  name: nova
+  user: nova
+  password: nova
+
+user:
+  name: &name admin1
+  password: &password secrete
+
+project:
+  name: &tenant project1
+
+network:
+  cidr: 172.30.252.0/24
+  nets: 1
+  ips:  254
+  cc: 172.30.252.1
+
+keystone:
+  admin: *name
+  admin_password: *password
+  tenant: *tenant
+  region: kRegion
+  cc: *cc_ip_value
+  token: 111333555777
+
+glance:
+  api_conf: /etc/glance/glance-api.conf
+  registry_conf: /etc/glance/glance-registry.conf
+
+image2:
+  path: images/mini_image.tar.gz
+  url: http://osc-build.vm.griddynamics.net/images/rhel_image.tar.gz
+#  url: http://127.0.0.1/images/rhel_image.tar.gz
+  disk: root_fs.raw
+  ram: initramfs-2.6.32-131.0.15.el6.x86_64.img
+  kernel: vmlinuz-2.6.32-131.0.15.el6.x86_64
+  name: rhel_image
+
+image:
+  path: images/ttylinux.tar.gz
+  url: http://osc-build.vm.griddynamics.net/images/mini_image.img
+#  url: http://127.0.0.1/images/mini_image.img
+  disk: mini_image.img
+  name: solid_mini_image
+
+flat_network:
+  cidr: 172.30.253.0/24
+  nets: 1
+  ips:  254
+  label: flat
+  bridge:
+    name: br_flat
+    addr: 172.30.253.1
+    netmask: 255.255.255.0
+
+
+vm:
+  user: root
+  flavor: m1.small
+  name: "rhelinstance1"
+  boot_timeout: 180
+  ping_deadline: 90
+  ssh_deadline: 90
+  keypair:
+    name: test_key
+    private: id_rsa_generated
+    public:  id_rsa_generated.pub
+
+vm2:
+  user: root
+  flavor: m1.small
+  name: "rhelinstance2"
+  boot_timeout: 180
+  ping_deadline: 90
+  ssh_deadline: 90
+  keypair:
+    name: test_key
+    private: id_rsa_generated
+    public:  id_rsa_generated.pub
+
+vm3:
+  user: root
+  flavor: m1.tiny
+  name: "singlethone"
+  boot_timeout: 60
+  ping_deadline: 30
+
+vm3:
+  user: root
+  flavor: m1.small
+  name: "rhelinstance3"
+  boot_timeout: 180
+  ping_deadline: 90
+  ssh_deadline: 90
+  keypair:
+    name: test_key
+    private: id_rsa_generated
+    public:  id_rsa_generated.pub
+
+openstack_services:
+ - nova-api
+ - nova-direct-api
+ - nova-compute
+ - nova-network
+ - nova-scheduler
+ - glance-api
+ - glance-registry
+
+supplementary_services:
+ - messagebus
+ - rabbitmq-server
+ - mysqld
+ - libvirtd
+
+test_prepequisites:
+ - tar
+ - grep
+ - sed
+ - gawk
+ - unzip
+ - openssh-clients
+ - openssh
+ - nc
+ - wget
+ - curl
+ - nmap
+ - pexpect
+ - nova2ools
+
+
+packages_to_install:
+ - libvirt
+ - mysql
+ - mysql-server
+ - rabbitmq-server
+ - openstack-nova-node-full
+ - MySQL-python
+ - euca2ools
+ - python-kombu
+## ^^^ TODO ADD TO DEPS
+
+packages_to_clean:
+ - django-file-upload
+ - django-openstack
+ - django-openstack-vnc
+ - openstack-client
+ - openstack-client-doc
+ - openstack-compute
+ - openstack-dashboard
+ - openstack-glance
+ - openstack-glance-doc
+ - openstack-keystone
+ - openstack-nova
+ - openstack-nova-api
+ - openstack-nova-cc-config
+ - openstack-nova-compute
+ - openstack-nova-compute-config
+ - openstack-nova-doc
+ - openstack-nova-instancemonitor
+ - openstack-nova-network
+ - openstack-nova-node-compute
+ - openstack-nova-node-full
+ - openstack-nova-noVNC
+ - openstack-nova-objectstore
+ - openstack-nova-scheduler
+ - openstack-nova-volume
+ - openstackx
+ - python-glance
+ - python-nova
+ - python-novaclient
+
+
+dep_wildcards_to_clean:
+ - '*qemu*'
+ - '*libvirt*'
+ - '*guestfs*'
+ - '*openstack*'
+ - '*nova*'
+ - '*glance*'
+ - '*swift*'
+ - '*keystone*'
+ - '*eventlet*'
+
+processes_to_kill:
+ - 'qemu-kvm'
+ - 'dnsmasq'
+
+state_files:
+ - '/etc/libvirt'
+ - '/var/lib/libvirt'
+ - '/var/log/libvirt'
+ - '/var/lib/keystone/keystone.{,token.}db'
+ - '/var/log/keystone/'
+ - '/var/lib/nova'
+ - '/var/log/nova'
+ - '/etc/nova'
+ - '/var/lib/glance'
+ - '/var/log/glance'
+ - '/etc/glance'
+ - '/var/log/rabbitmq/'
+ - '/var/lib/rabbitmq/'
+ - '/tmp/.guestfs*'
+ - '/tmp/tmp*'
+
+volume:
+  source_dev:  '/dev/loop4'
+  source_dev_file: '/tmp/loop4'
+  source_dev_size: 4
+  group: nova-volumes
+  name:   vol
+  dev:   '/dev/vdc'
+  size: 1
+  zone: nova
+  timeout: 60
+  attach_deadline: 60
+  dir: '/tmp/nova-volume-test'
+
+volume1:
+  name:   vol1
+  dev:   '/dev/vdd'
+  size: 1
+  zone: nova
+  timeout: 60
+  attach_deadline: 60
+
+
+volume_packages:
+ - scsi-target-utils
+ - lvm2
+
+volume_services1:
+ - tgtd
+
+volume_services2:
+ - nova-volume
+
+sg:
+  name: smoketest
+
+sg2:
+  name: smoketest2
+
+sg3:
+  name: smoketest3
+
+
+floating:
+  name: floatip

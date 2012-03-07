@@ -1,0 +1,29 @@
+Feature: Stop services, remove packages and clear all openstack stuff
+
+Scenario: Setup prerequisites
+    Require setup "single-node ! novarc"
+
+
+  Scenario: Remove Volumes
+    Given novarc is available
+    I remove ALL volumes
+    I remove lvm group "{{volume.group}}" on device "{{volume.source_dev}}"
+    I remove loop device "{{volume.source_dev}}"
+
+  Scenario: Stop Floating
+    I de-allocate ALL addresses
+    I remove ALL pools of external IP addresses
+
+  Scenario: Stop Instances
+    I stop ALL vm instances
+
+  Scenario: Remove images
+    I deregister ALL VM images
+
+  Scenario: Remove security groups
+    I remove ALL security groups
+
+  Scenario: Remove initial info
+    I remove ALL nova projects
+    I remove ALL nova networks
+    I remove ALL nova users

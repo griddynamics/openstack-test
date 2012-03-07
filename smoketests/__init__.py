@@ -3,7 +3,7 @@ from nose.tools import assert_equals, assert_true, assert_false
 import utils
 from utils import onfailure
 import os
-import lettuce_bunch.special
+import bunch.special
 import conf
 
 dir_path = conf.get_current_module_path(__file__)
@@ -33,7 +33,7 @@ class step_assert(object):
     def assert_true(self, expr):
         msg = 'Step "%s" failed ' % self.step.sentence
         assert_true(expr, msg)
-        
+
     def assert_false(self, expr):
         msg = 'Step "%s" failed ' % self.step.sentence
         assert_false(expr, msg)
@@ -126,7 +126,7 @@ def mysql_user_has_all_privileges(step, user, db_name):
 
 @step(u'I perform Nova DB sync')
 def perform_nova_db_sync(step):
-    step_assert(step).assert_true(utils.nova_cli.db_sync())
+    step_assert(step).assert_true(utils.nova_manage.db_sync())
 
 
 @step(u'I stop services:')
@@ -171,46 +171,53 @@ def verify_flag_not_exist_file(step,flag_file):
 
 @step(u'I create nova admin user "(.*?)"')
 def create_nova_admin(step, username):
-    step_assert(step).assert_true(utils.nova_cli.create_admin(username))
+    step_assert(step).assert_true(utils.nova_manage.create_admin(username))
 
 @step(u'I remove nova admin user "(.*?)"')
 def remove_nova_admin(step, username):
-    step_assert(step).assert_true(utils.nova_cli.remove_admin(username))
+    step_assert(step).assert_true(utils.nova_manage.delete_admin(username))
+
+@step(u'I remove ALL nova users')
+def remove_all_users(step):
+    step_assert(step).assert_true(utils.nova_manage.delete_all_users())
 
 @step(u'nova user "(.*?)" exists')
 def nova_user_exists(step, user):
-    step_assert(step).assert_true(utils.nova_cli.user_exists(user))
+    step_assert(step).assert_true(utils.nova_manage.user_exists(user))
 
 @step(u'nova user "(.*?)" does not exists')
 def nova_user_exists(step, user):
-    step_assert(step).assert_false(utils.nova_cli.user_exists(user))
+    step_assert(step).assert_false(utils.nova_manage.user_exists(user))
 
 @step(u'I create nova project "(.*?)" for user "(.*?)"')
 def create_nova_project(step, name, user):
-    step_assert(step).assert_true(utils.nova_cli.create_project(name, user))
-
+    step_assert(step).assert_true(utils.nova_manage.create_project(name, user))
 
 @step(u'I remove nova project "(.*?)"')
 def remove_nova_project(step, name):
-    step_assert(step).assert_true(utils.nova_cli.remove_project(name))
+    step_assert(step).assert_true(utils.nova_manage.remove_project(name))
+
+@step(u'I remove ALL nova projects')
+def remove_all_projects(step):
+    step_assert(step).assert_true(utils.nova_manage.delete_all_projects())
 
 
 @step(u'nova project "(.*?)" exists')
 def nova_project_exists(step, project):
-    step_assert(step).assert_true(utils.nova_cli.project_exists(project))
+    step_assert(step).assert_true(utils.nova_manage.project_exists(project))
 
 @step(u'nova project "(.*?)" does not exists')
 def nova_project_exists(step, project):
-    step_assert(step).assert_false(utils.nova_cli.project_exists(project))
+    step_assert(step).assert_false(utils.nova_manage.project_exists(project))
 
 @step(u'nova user "(.*?)" is the manager of the nova project "(.*?)"')
 def nova_user_is_project_manager(step, user, project):
-    step_assert(step).assert_true(utils.nova_cli.user_is_project_admin(user, project))
+    step_assert(step).assert_true(utils.nova_manage.user_is_project_admin(user, project))
 
 
 @step(u'I create nova network "(.*?)" with "(.*?)" nets, "(.*?)" IPs per network')
 def create_nova_network(step, cidr, nets, ips):
-    step_assert(step).assert_true(utils.nova_cli.create_network(cidr, nets, ips))
+    step_assert(step).assert_true(utils.nova_manage.create_network(cidr, nets, ips))
 
 
 @step(u'I create nova network with the following parameters:')
@@ -218,12 +225,15 @@ def create_nova_network_by_params(step):
     flags = {}
     for data in step.hashes:
         flags[data['Parameter']] = data['Value']
-    step_assert(step).assert_true(utils.nova_cli.create_network_via_flags(flags))
-
+    step_assert(step).assert_true(utils.nova_manage.create_network_via_flags(flags))
 
 @step(u'nova network "(.*?)" exists')
 def nova_network_exists(step, cidr):
-    step_assert(step).assert_true(utils.nova_cli.network_exists(cidr))
+    step_assert(step).assert_true(utils.nova_manage.network_exists(cidr))
+
+@step(u'I remove ALL nova networks')
+def remove_all_networks(step):
+    step_assert(step).assert_true(utils.nova_manage.delete_all_networks())
 
 @step(u'I get EC2 keys for project "(.*?)", user "(.*?)"')
 def export_ec2_keys(step, project, user):
@@ -300,6 +310,10 @@ def register_all_images(step, name, owner, disk):
 def image_registered(step, name):
     step_assert(step).assert_true(utils.nova_cli.vm_image_registered(name))
 
+@step(u'I deregister ALL VM images')
+def deregister_all_images(step):
+    step_assert(step).assert_true(utils.glance_cli.deregister_all_images())
+
 @step(u'I generate keypair saving it to file "(.*?)"')
 def gen_key_pair(step, file):
     key_path = os.path.join(bunch_working_dir,file)
@@ -314,6 +328,9 @@ def add_keypair(step, name, file):
 def delete_keypair(step, name):
     step_assert(step).assert_true(utils.nova_cli.delete_keypair(name))
 
+@step(u'I remove ALL keypairs')
+def delete_all_keypairs(step):
+    step_assert(step).assert_true(utils.nova_cli.delete_all_keypairs())
 
 @step(u'keypair with name "(.*?)" exists')
 def keypair_exists(step, name):
@@ -395,6 +412,10 @@ def start_vm_instance_save_root_pwd(step, name,image, flavor):
 @step(u'I stop VM instance "(.*?)"')
 def stop_vm_instance(step, name):
     step_assert(step).assert_true(utils.nova_cli.stop_vm_instance(name))
+
+@step(u'I stop ALL VM instances')
+def stop_all_vm_instance(step):
+    step_assert(step).assert_true(utils.nova_cli.stop_all_vm_instances())
 
 @step(u'VM instance "(.*?)" is stopped within "(.*?)" seconds')
 def wait_instance_stopped(step, name, timeout):
@@ -528,6 +549,10 @@ def create_volume(step, volume_name, volume_size, volume_zone):
 def remove_volume(step, volume_name):
     step_assert(step).assert_true(utils.euca_cli.volume_delete(volume_name=volume_name))
 
+@step(u'I remove ALL volumes')
+def remove_all_volumes(step):
+    step_assert(step).assert_true(utils.euca_cli.volume_delete_all())
+
 @step(u'volume "(.*?)" comes up within "(.*?)" seconds')
 def check_volume_comes_up(step, volume_name, timeout):
     step_assert(step).assert_true(utils.euca_cli.wait_volume_comes_up(volume_name=volume_name, timeout=timeout))
@@ -549,7 +574,7 @@ def check_volume_attached(step, volume_name, instance_name):
     step_assert(step).assert_true(utils.euca_cli.volume_attached_to_instance(instance_name=instance_name, volume_name=volume_name))
 
 @step(u'I detach volume "(.*?)"')
-def attach_volume(step, volume_name):
+def dettach_volume(step, volume_name):
     step_assert(step).assert_true(utils.euca_cli.volume_detach(volume_name=volume_name))
 
 @step(u'I login to VM "(.*?)" via SSH as "(.*?)" with key "(.*?)" and run commands:')
@@ -593,6 +618,10 @@ def keystone_create_user(step, user, password, tenant):
 def keystone_user_exist(step, user):
     step_assert(step).assert_true(utils.keystone_manage.check_user_exist(user))
 
+@step(u'I remove ALL keystone users')
+def keystone_user_delete_all(step):
+    step_assert(step).assert_true(utils.keystone_manage.delete_all_users())
+
 @step(u'I grant role "(.*?)" for keystone user "(.*?)" in tenant "(.*?)"')
 def keystone_grant_role(step, role, user, tenant):
     step_assert(step).assert_true(utils.keystone_manage.grant_role(role, user, tenant))
@@ -630,6 +659,11 @@ def add_security_group(step, group_name):
 def remove_security_group(step, group_name):
     step_assert(step).assert_true(utils.euca_cli.sgroup_delete(group_name=group_name))
 
+@step(u'I remove ALL security groups')
+def remove_all_security_groups(step
+):
+    step_assert(step).assert_true(utils.euca_cli.sgroup_delete_all())
+
 @step(u'I see security group "(.*?)" exist')
 def check_security_group_exist(step, group_name):
     step_assert(step).assert_true(utils.euca_cli.sgroup_check(group_name=group_name))
@@ -665,6 +699,11 @@ def add_floating_pool(step, cidr):
 def remove_floating_pool(step, cidr):
     step_assert(step).assert_true(utils.nova_manage.floating_remove_pool(cidr))
 
+@step(u'I remove ALL pools of external IP addresses')
+def remove_all_floating_pool(step):
+    step_assert(step).assert_true(utils.nova_manage.floating_remove_all_pools())
+
+
 @step(u'I see pool of external IP addresses "(.*?)" exist')
 def check_floating_pool_exist(step, cidr):
     step_assert(step).assert_true(utils.nova_manage.floating_check_pool(cidr))
@@ -682,6 +721,10 @@ def allocate_floating_address(step, name):
 def deallocate_floating_address(step, name):
     step_assert(step).assert_true(utils.nova_cli.floating_deallocate(name))
 
+@step(u'I de-allocate ALL addresses')
+def deallocate_all_floating_address(step):
+    step_assert(step).assert_true(utils.nova_cli.floating_deallocate_all())
+
 @step(u'I see address "(.*?)" allocated')
 def floating_check_address_allocated(step, name):
     step_assert(step).assert_true(utils.nova_cli.floating_check_allocated(name))
@@ -697,6 +740,7 @@ def associate_floating_address(step, address,instance):
 @step(u'I de-associate address "(.*?)" from instance "(.*?)"')
 def deassociate_floating_address(step, address,instance):
     step_assert(step).assert_true(utils.nova_cli.floating_deassociate(address, instance))
+
 
 @step(u'I see address "(.*?)" associated with instance "(.*?)"')
 def check_address_associated(step, address,instance):
