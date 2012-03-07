@@ -417,16 +417,38 @@ class novarc(dict):
         return False
 
 
-
         ##===================##
         ##  KEYSTONE MANAGE  ##
         ##===================##
 
 class keystone_manage(object):
     @staticmethod
+    def bash(cmd):
+        return bash('sudo keystone-manage %s' % cmd).successful()
+
+    @staticmethod
+    def bash_check_out(cmd, pattern=''):
+        out = bash('sudo keystone-manage %s' % cmd)
+        return out.successful() and out.output_contains_pattern(".*%s.*" % pattern)
+
+    @staticmethod
+    def bash_out(cmd):
+        out = bash('sudo keystone-manage %s' % cmd)
+        garbage_list = ['DeprecationWarning', 'import md5', 'import sha']
+
+        def does_not_contain_garbage(str_item):
+            for item in garbage_list:
+                if item in str_item:
+                    return False
+            return True
+
+        lines_without_warning = filter(does_not_contain_garbage, out.output_text().split(os.linesep))
+        return string.join(lines_without_warning, os.linesep)
+
+    @staticmethod
     def init_default(host='127.0.0.1', user='admin', password='secrete',tenant='systenant', token='111222333444', region='regionOne'):
         for cmd in DEFAULT_FIXTURE:
-            bash("sudo keystone-manage %s" % ' '.join(cmd))
+            keystone_manage.bash("%s" % ' '.join(cmd))
 
         keystone_manage.create_tenant(tenant)
 
@@ -445,62 +467,55 @@ class keystone_manage(object):
 
     @staticmethod
     def create_tenant(name):
-        out = bash("sudo keystone-manage tenant add %s" % name)
-        return out.successful()
+        return keystone_manage.bash("tenant add %s" % name)
+
 
     @staticmethod
     def check_tenant_exist(name):
-        out = bash("sudo keystone-manage tenant list|grep %s" % name ).output_text()
-        if out.split()[1]:
-            return True
-        return False
+        return keystone_manage.bash_check_out("tenant list" , name)
 
     @staticmethod
     def delete_tenant(name):
-        out = bash("sudo keystone-manage tenant delete %s" % name)
-        return out.successful()
+        return keystone_manage.bash("tenant delete %s" % name)
 
     @staticmethod
     def create_user(name,password,tenant=''):
-        out = bash("sudo keystone-manage user add %s %s %s" % (name,password,tenant))
-        return out.successful()
+        return keystone_manage.bash("user add %s %s %s" % (name,password,tenant))
 
     @staticmethod
     def check_user_exist(name):
-        out = bash("sudo keystone-manage user list|grep %s" % name ).output_text()
-        if out.split()[1]:
-            return True
-        return False
+        return keystone_manage.bash_check_out("user list" , name)
 
     @staticmethod
     def delete_user(name):
-        out = bash("sudo keystone-manage user delete %s" % name)
-        return out.successful()
+        return keystone_manage.bash("user delete %s" % name)
+
+    @staticmethod
+    def delete_all_users():
+        out = keystone_manage.bash_out("user list")
+        for name in out.splitlines():
+            keystone_manage.bash("user delete %s" % name)
+        return True
 
     @staticmethod
     def add_role(name):
-        out = bash("sudo keystone-manage role add %s" % name)
-        return out.successful()
+        return keystone_manage.bash("role add %s" % name)
 
     @staticmethod
     def check_role_exist(name):
-        out = bash("sudo keystone-manage role list|grep %s" % name ).output_text()
-        if out.split()[1]:
-            return True
-        return False
+        return keystone_manage.bash_check_out("role list" , name)
 
     @staticmethod
     def delete_role(name):
-        out = bash("sudo keystone-manage role delete %s" % name)
-        return out.successful()
+        return keystone_manage.bash("role delete %s" % name)
 
     @staticmethod
     def grant_role(role, user, tenant=None):
         if tenant in (None,''):
-            out = bash("sudo keystone-manage role grant %s %s" % (role,user))
+            return keystone_manage.bash("role grant %s %s" % (role,user))
         else:
-            out = bash("sudo keystone-manage role grant %s %s %s" % (role,user, tenant))
-        return out.successful()
+            return keystone_manage.bash("role grant %s %s %s" % (role,user, tenant))
+        return False
 
 #__ TODO __
     @staticmethod
@@ -510,58 +525,43 @@ class keystone_manage(object):
 
     @staticmethod
     def revoke_role(role, user):
-        out = bash("sudo keystone-manage role revoke %s %s" % (role,user))
-        return out.successful()
+        keystone_manage.bash("role revoke %s %s" % (role,user))
 
     @staticmethod
     def add_template(region='', service='', publicURL='', adminURL='', internalURL='', enabled='1', isglobal='1'):
-        out = bash("sudo keystone-manage endpointTemplates add %s %s %s %s %s %s %s" % (region, service, publicURL, adminURL, internalURL, enabled, isglobal))
-        return out.successful()
+        return keystone_manage.bash("endpointTemplates add %s %s %s %s %s %s %s" % (region, service, publicURL, adminURL, internalURL, enabled, isglobal))
 
     @staticmethod
     def delete_template(region='', service='', publicURL='', adminURL='', internalURL='', enabled='1', isglobal='1'):
-        out = bash("sudo keystone-manage endpointTemplates delete %s %s %s %s %s %s %s" % (region, service, publicURL, adminURL, internalURL, enabled, isglobal))
-        return out.successful()
+        return keystone_manage.bash("endpointTemplates delete %s %s %s %s %s %s %s" % (region, service, publicURL, adminURL, internalURL, enabled, isglobal))
 
     @staticmethod
     def add_token(user, tenant, token='111222333444', expiration='2015-02-05T00:00'):
-        out = bash("sudo keystone-manage token add %s %s %s %s" % (token, user, tenant, expiration))
-        return out.successful()
+        return keystone_manage.bash("token add %s %s %s %s" % (token, user, tenant, expiration))
 
 #__ TODO __ (convert id to names, check it)
     @staticmethod
     def check_token_exist(user, tenant, token='111222333444', expiration='2015-02-05T00:00'):
-        out = bash("sudo keystone-manage token list|grep %s" % token ).output_text()
-        if out.split()[0]==token:
-            return True
-        return False
-
+        return keystone_manage.bash_check_out("token list", token)
 
     @staticmethod
     def delete_token(user, tenant, token='111222333444', expiration='2015-02-05T00:00'):
-        out = bash("sudo keystone-manage token delete %s" % token)
-        return out.successful()
+        return keystone_manage.bash("token delete %s" % token)
 
     @staticmethod
     def add_endpoint(tenant, template):
-        out = bash("sudo keystone-manage endpoint add %s %s" % (tenant, template))
-        return out.successful()
+        return keystone_manage.bash("endpoint add %s %s" % (tenant, template))
 
     @staticmethod
     def delete_endpoint(tenant, template):
-        out = bash("sudo keystone-manage endpoint delete %s %s" % (tenant, template))
-        return out.successful()
+        return keystone_manage.bash("endpoint delete %s %s" % (tenant, template))
 
     @staticmethod
     def add_credential(user, tenant, service, key, secrete):
-        out = bash("sudo keystone-manage credentials add %s %s %s %s %s" % (user, service, key, secrete, tenant))
-        return out.successful()
+        return keystone_manage.bash("credentials add %s %s %s %s %s" % (user, service, key, secrete, tenant))
 
     def delete_credential(user, tenant, service, key, secrete):
-        out = bash("sudo keystone-manage credentials remove %s %s %s %s %s" % (user, service, key, secrete, tenant))
-        return out.successful()
-
-
+        return keystone_manage.bash("credentials remove %s %s %s %s %s" % (user, service, key, secrete, tenant))
 
 
         ##===============##
@@ -570,37 +570,140 @@ class keystone_manage(object):
 
 class nova_manage(object):
     @staticmethod
+    def bash(cmd):
+        return bash('sudo nova-manage %s' % cmd).successful()
+
+    @staticmethod
+    def bash_check_out(cmd, pattern=''):
+        out = bash('sudo nova-manage %s' % cmd)
+        return out.successful() and out.output_contains_pattern(".*%s.*" % pattern)
+
+    @staticmethod
+    def bash_out(cmd):
+        out = bash('sudo nova-manage %s' % cmd)
+        garbage_list = ['DeprecationWarning', 'import md5', 'import sha']
+
+        def does_not_contain_garbage(str_item):
+            for item in garbage_list:
+                if item in str_item:
+                    return False
+            return True
+
+        lines_without_warning = filter(does_not_contain_garbage, out.output_text().split(os.linesep))
+        return string.join(lines_without_warning, os.linesep)
+
+
+    @staticmethod
+    def db_sync():
+        return nova_manage.bash("db sync")
+
+    @staticmethod
     def get_zipfile(project, user, destination):
         path = os.path.join(destination, 'novarc.zip')
         out = bash('sudo nova-manage project zipfile %s %s %s' % (project, user, path))
-        destination = destination
         if out.successful():
-            out = bash("unzip -uo %s -d %s" % (path,destination+"/novarc_zip"))
-            out = bash("cp -f %s/*.pem %s" % (destination+"/novarc_zip", destination))
-        return True
+            bash("unzip -uo %s -d %s" % (path,destination+"/novarc_zip"))
+            bash("cp -f %s/*.pem %s" % (destination+"/novarc_zip", destination))
+        return out.successful()
 
     @staticmethod
     def export_ec2_keys(project, user, destination):
-        out=bash('sudo nova-manage user exports --name %s' % user)
-        for line in out.output_text().split('\n'):
+        out = nova_manage.bash_out('user exports --name %s' % user)
+        for line in out.split('\n'):
             if 'export' in line:
                 line=line.split(' ')[1]
                 (parameter, value) = line.split('=')
                 world.novarc[parameter]=value
-        nova_manage.get_zipfile(project, user, destination)
-        return out.successful()
+        return nova_manage.get_zipfile(project, user, destination)
+
+    @staticmethod
+    def create_admin(username):
+        return nova_manage.bash("user admin %s" % username)
+
+    @staticmethod
+    def delete_admin(username):
+        return nova_manage.bash("user delete %s" % username)
+
+    @staticmethod
+    def delete_all_users():
+        out = nova_manage.bash_out("user list")
+        for name in out.splitlines():
+            nova_manage.bash("user delete %s" % name)
+        return True
+
+    @staticmethod
+    def user_exists(username):
+        return nova_manage.bash_check_out("user list", username)
+
+    @staticmethod
+    def create_project(project_name, username):
+        return nova_manage.bash("project create %s %s" % (project_name, username))
+
+    @staticmethod
+    def remove_project(project_name):
+        return nova_manage.bash("project delete %s" % project_name)
+
+    @staticmethod
+    def delete_all_projects():
+        out = nova_manage.bash_out("project list")
+        for name in out.splitlines():
+            nova_manage.bash("project delete %s" % name)
+        return True
+
+    @staticmethod
+    def project_exists(project):
+        return nova_manage.bash_check_out("project list", project)
+
+    @staticmethod
+    def user_is_project_admin(user, project):
+        return nova_manage.bash_check_out("project list --user=%s" % user, project)
+
+    @staticmethod
+    def create_network(cidr, nets, ips):
+        return nova_manage.bash('network create private "%s" %s %s' % (cidr, nets, ips))
+
+    @staticmethod
+    def delete_network(cidr):
+        return nova_manage.bash('network delete "%s"' % cidr)
+
+    @staticmethod
+    def delete_all_networks():
+        out = nova_manage.bash_out("network list")
+        for name in out.splitlines()[1:]:
+            nova_manage.bash("network delete %s" % name.split()[1])
+        return True
+
+    @staticmethod
+    def create_network_via_flags(flags_dict):
+        params = ""
+        for flag, value in flags_dict.items():
+            params += " {flag}='{value}'".format(flag=flag, value=value)
+        return nova_manage.bash('network create %s' % params)
+
+    @staticmethod
+    def network_exists(cidr):
+        return nova_manage.bash_check_out('network list', cidr)
 
     @staticmethod
     def floating_add_pool(cidr):
-        return bash('sudo nova-manage floating create %s' % cidr)
+        return nova_manage.bash('floating create %s' % cidr)
+
+    @staticmethod
+    def floating_remove_all_pools():
+        if nova_manage.bash("floating list"):
+            out = nova_manage.bash_out("floating list")
+            for name in out.splitlines():
+                nova_manage.bash("floating delete %s" % name.split()[1])
+        return True
+
 
     @staticmethod
     def floating_remove_pool(cidr):
-        return bash('sudo nova-manage floating delete %s' % cidr)
+        return nova_manage.bash('floating delete %s' % cidr)
 
     @staticmethod
     def floating_check_pool(cidr):
-        out = bash('sudo nova-manage floating list').output_text()
+        out = nova_manage.bash_out('floating list')
         ips=IP(cidr)
 
         for addr in ips:
@@ -613,13 +716,14 @@ class nova_manage(object):
     @staticmethod
     def vm_image_register(image_name, owner, disk, ram, kernel):
         if (ram and kernel) not in ('', None):
-            out = bash('sudo nova-manage image all_register --image="%s" --kernel="%s" --ram="%s" --owner="%s" --name="%s"'
+            out = nova_manage.bash('image all_register --image="%s" --kernel="%s" --ram="%s" --owner="%s" --name="%s"'
                 % (disk, kernel, ram, owner, image_name))
         else:
-            out = bash('sudo nova-manage image image_register --path="%s" --owner="%s" --name="%s"'
+            out = nova_manage.bash('image image_register --path="%s" --owner="%s" --name="%s"'
                 % (disk, owner, image_name))
 
-        return out.successful()
+        return out
+
 
 
         ##============##
@@ -629,62 +733,25 @@ class nova_manage(object):
 
 class nova_cli(object):
     @staticmethod
-    def create_admin(username):
-        out = bash("sudo nova-manage user admin %s" % username)
-        #nova_manage.export_ec2_keys(username)
-        return out.successful()
+    def exec_novaclient_cmd(cmd):
+        return novarc.bash('nova %s' % cmd).successful()
 
     @staticmethod
-    def remove_admin(username):
-        out = bash("sudo nova-manage user delete %s" % username)
-        return out.successful()
+    def get_novaclient_command_out(cmd):
+        out = novarc.bash('nova %s' % cmd)
+        garbage_list = ['DeprecationWarning', 'import md5', 'import sha']
 
-    @staticmethod
-    def user_exists(username):
-        out = bash("sudo nova-manage user list")
-        return out.successful() and out.output_contains_pattern(".*%s.*" % username)
+        def does_not_contain_garbage(str_item):
+            for item in garbage_list:
+                if item in str_item:
+                    return False
+            return True
 
-    @staticmethod
-    def create_project(project_name, username):
-        out = bash("sudo nova-manage project create %s %s" % (project_name, username))
-        return out.successful()
-
-    @staticmethod
-    def remove_project(project_name):
-        out = bash("sudo nova-manage project delete %s" % project_name)
-        return out.successful()
-
-    @staticmethod
-    def project_exists(project):
-        out = bash("sudo nova-manage project list")
-        return out.successful() and out.output_contains_pattern(".*%s.*" % project)
-
-    @staticmethod
-    def user_is_project_admin(user, project):
-        out = bash("sudo nova-manage project list --user=%s" % user)
-        return out.successful() and out.output_contains_pattern(".*%s.*" % project)
-
-    @staticmethod
-    def create_network(cidr, nets, ips):
-        out = bash('sudo nova-manage network create private "%s" %s %s' % (cidr, nets, ips))
-        return out.successful()
-
-    @staticmethod
-    def create_network_via_flags(flags_dict):
-        params = ""
-        for flag, value in flags_dict.items():
-            params += " {flag}='{value}'".format(flag=flag, value=value)
-
-        return bash('sudo nova-manage network create %s' % params).successful()
-
-    @staticmethod
-    def network_exists(cidr):
-        out = bash('sudo nova-manage network list')
-        return out.successful() and out.output_contains_pattern(".*%s.*" % cidr)
+        lines_without_warning = filter(does_not_contain_garbage, out.output_text().split(os.linesep))
+        return string.join(lines_without_warning, os.linesep)
 
 
 #___ TODO ____
-
     @staticmethod
     def vm_image_register(image_name, owner, disk, ram, kernel):
         print "TODO"
@@ -706,6 +773,17 @@ class nova_cli(object):
     @staticmethod
     def delete_keypair(name):
         return nova_cli.exec_novaclient_cmd('keypair-delete %s' % name)
+
+
+    @staticmethod
+    def delete_all_keypairs():
+        if nova_cli.exec_novaclient_cmd("keypair-list"):
+            text = nova_cli.get_novaclient_command_out("keypair-list")
+            table = ascii_table(text)
+            for name in table.select_values('Name', 'Fingerprint', '*'):
+                nova_cli.exec_novaclient_cmd('keypair-delete %s' % name)
+        return True
+
 
     @staticmethod
     def keypair_exists(name):
@@ -756,36 +834,22 @@ class nova_cli(object):
     def stop_vm_instance(name):
         return nova_cli.exec_novaclient_cmd("delete %s" % world.instances[name])
 
+    @staticmethod
+    def stop_all_vm_instances():
+        text = nova_cli.get_novaclient_command_out("list")
+        if text:
+            table = ascii_table(text)
+            for name in table.select_values('ID', 'Name', '*'):
+                world.instances[name] = name
+        for name in world.instances.keys():
+            nova_cli.stop_vm_instance(name)
+        return True
 
     @staticmethod
     def get_flavor_id_list(name):
         lines = nova_cli.get_novaclient_command_out("flavor-list | grep  %s | awk '{print $2}'" % name)
         id_list = lines.split(os.linesep)
         return id_list
-
-
-    @staticmethod
-    def db_sync():
-        out = bash("sudo nova-manage db sync")
-        return out.successful()
-
-    @staticmethod
-    def exec_novaclient_cmd(cmd):
-        return novarc.bash('nova %s' % cmd).successful()
-
-    @staticmethod
-    def get_novaclient_command_out(cmd):
-        out = novarc.bash('nova %s' % cmd)
-        garbage_list = ['DeprecationWarning', 'import md5', 'import sha']
-
-        def does_not_contain_garbage(str_item):
-            for item in garbage_list:
-                if item in str_item:
-                    return False
-            return True
-
-        lines_without_warning = filter(does_not_contain_garbage, out.output_text().split(os.linesep))
-        return string.join(lines_without_warning, os.linesep)
 
 
     @staticmethod
@@ -842,7 +906,6 @@ class nova_cli(object):
         return True
 
 
-
     @staticmethod
     def floating_allocate(name):
         text = nova_cli.get_novaclient_command_out('floating-ip-create %s' % name)
@@ -855,6 +918,18 @@ class nova_cli(object):
     @staticmethod
     def floating_deallocate(name):
         return nova_cli.exec_novaclient_cmd('floating-ip-delete %s' % world.floating[name])
+
+    @staticmethod
+    def floating_deallocate_all():
+        if nova_cli.exec_novaclient_cmd('floating-ip-list'):
+            text = nova_cli.get_novaclient_command_out('floating-ip-list')
+            table = ascii_table(text)
+            for name in table.select_values('Ip', 'Pool', '*'):
+                world.floating[name] = name
+        if world.floating:
+            for name in world.floating.keys():
+                nova_cli.floating_deallocate(name)
+        return True
 
     @staticmethod
     def floating_check_allocated(name):
@@ -879,6 +954,7 @@ class nova_cli(object):
     def floating_deassociate(addr_name, ins_name):
         return nova_cli.exec_novaclient_cmd('remove-floating-ip %s %s' % (world.instances[ins_name],world.floating[addr_name]))
 
+
     @staticmethod
     def floating_check_associated(addr_name, ins_name):
         if not world.floating[addr_name]: world.floating[addr_name]=None
@@ -889,7 +965,6 @@ class nova_cli(object):
             if table.select_values('Instance', 'Ip', world.floating[addr_name])[0]==world.instances[ins_name]:
                 return True
         return False
-
 
 
         ##============##
@@ -1034,6 +1109,20 @@ class euca_cli(object):
         out = novarc.bash("euca-delete-volume %s" % volume_id)
         return out.successful()
 
+
+    @staticmethod
+    def volume_delete_all():
+        out = novarc.bash("euca-describe-volumes").output_text()
+        for name in out.splitlines():
+            if 'vol-' in name:
+                world.volumes[name.split()[1]] = misc.get_nova_id(name.split()[1])
+        if world.volumes:
+            for volume_name in world.volumes.keys():
+                euca_cli.volume_detach(volume_name)
+                euca_cli.volume_delete(volume_name)
+                euca_cli.check_volume_deleted(volume_name)
+        return True
+
     @staticmethod
     def sgroup_add(group_name):
         return novarc.bash('euca-add-group -d smoketest-secgroup-test %s' % group_name).successful()
@@ -1041,6 +1130,13 @@ class euca_cli(object):
     @staticmethod
     def sgroup_delete(group_name):
         return novarc.bash('euca-delete-group %s' % group_name).successful()
+
+    @staticmethod
+    def sgroup_delete_all():
+        out = novarc.bash("euca-describe-groups | grep GROUP").output_text()
+        for name in out.splitlines():
+            novarc.bash("euca-delete-group %s" % name.split()[2])
+        return True
 
     @staticmethod
     def sgroup_check(group_name):
@@ -1121,7 +1217,6 @@ class glance_cli(object):
             return None
         return int(out.output_text().split(':')[1])
 
-
     @staticmethod
     def vm_image_register(image_name, owner, disk, ram, kernel):
         kernel_id = glance_cli.glance_add(kernel, "aki", name="%s_kernel" % image_name)
@@ -1134,7 +1229,6 @@ class glance_cli(object):
             kernel, "ami", name=image_name, kernel_id=kernel_id, ramdisk_id=ramdisk_id)
         return rootfs_id is not None
 
-
     @staticmethod
     def vm_image_register_single(image_name, owner, image_file):
         out = novarc.bash('glance add disk_format=raw is_public=True name=%s < "%s"'
@@ -1143,6 +1237,9 @@ class glance_cli(object):
         rootfs_id = int(out.output_text().split(':')[1])
         return rootfs_id is not None
 
+    @staticmethod
+    def deregister_all_images():
+        return bash("sudo glance -f clear").successful()
 
 
 class misc(object):
@@ -1262,7 +1359,10 @@ class ascii_table(object):
     def select_values(self, from_column, where_column, items_equal_to):
         from_column_number = self.titles.index(from_column.split()[0])
         where_column_name_number = self.titles.index(where_column.split()[0])
-        return [item[from_column_number] for item in self.rows if item[where_column_name_number] == items_equal_to]
+        if items_equal_to == '*':
+            return [item[from_column_number] for item in self.rows]
+        else:
+            return [item[from_column_number] for item in self.rows if item[where_column_name_number] == items_equal_to]
 
 class expect_spawn(pexpect.spawn):
     def get_output(self, code_override=None):

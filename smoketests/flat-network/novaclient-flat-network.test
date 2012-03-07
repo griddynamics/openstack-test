@@ -14,7 +14,7 @@ Feature: Do preparations to test Flat Networking
 #    I want to register start instance and verify it is up and available via SSH
 
     Scenario: Setup prerequisites
-        Require setup "single-node ! novaclient-users ! novaclient-network ! novaclient-images ! novaclient-keys"
+        Require setup "single-node ! novaclient-users ! novarc ! novaclient-network ! novaclient-images ! novaclient-keys"
 
     #Setup part
 
