@@ -707,10 +707,12 @@ def remove_all_floating_pool(step):
 
 
 @step(u'I see pool of external IP addresses "(.*?)" exist')
+@onfailure(utils.debug.save.log('nova/nova-manage.log'))
 def check_floating_pool_exist(step, cidr):
     step_assert(step).assert_true(utils.nova_manage.floating_check_pool(cidr))
 
 @step(u'I see pool of external IP addresses "(.*?)" does not exist')
+@onfailure(utils.debug.save.log('nova/nova-manage.log'))
 def check_floating_pool_not_exist(step, cidr):
     step_assert(step).assert_false(utils.nova_manage.floating_check_pool(cidr))
 
